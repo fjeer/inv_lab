@@ -1,0 +1,9 @@
+pada sistem setiap barang memiliki jumlah
+setiap barang memiliki qr code masing masing
+format qr code ; gedung ruangan nama alat nomer urut 
+pengajuan barang harus memiliki histori alat sebelumnya jika itu ada jika ada maka opsional
+jadwal penggunaan adalah jadwal untuk patrol lab
+harus mengikat pada user yang melakukan cek sesuai dengan jadwal
+
+asisten
+jadwal mengikat pada asisten dan alat lab
