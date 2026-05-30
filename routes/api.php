@@ -5,7 +5,7 @@ use App\Http\Controllers\Api\LaboratoryApiController;
 use App\Http\Controllers\Api\BorrowingApiController;
 use App\Http\Controllers\Api\ProcurementApiController;
 use App\Http\Controllers\Api\UtilityApiController;
-use App\Http\Controllers\Api\ScheduleApiController;
+
 use App\Http\Controllers\Api\DashboardApiController;
 use App\Http\Controllers\Api\CategoryApiController;
 use App\Http\Controllers\Api\AuthApiController;
@@ -15,6 +15,7 @@ use App\Http\Controllers\Api\RoomApiController;
 use App\Http\Controllers\Api\ConditionApiController;
 use App\Http\Controllers\Api\DamageReportApiController;
 use App\Http\Controllers\Api\ProfileApiController;
+use App\Http\Controllers\Api\PatrolScheduleApiController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -41,12 +42,9 @@ Route::middleware('auth:sanctum')->group(function () {
     // Utilities
     Route::get('/options', [UtilityApiController::class, 'options']);
 
-    // Schedules
-    Route::get('/schedules', [ScheduleApiController::class, 'index']);
-    Route::post('/schedules', [ScheduleApiController::class, 'store']);
-    Route::put('/schedules/{id}', [ScheduleApiController::class, 'update']);
-    Route::delete('/schedules/{id}', [ScheduleApiController::class, 'destroy']);
-    Route::middleware('role:admin_lab,asisten_lab')->group(function () {
+    // Schedules routes removed since LabSchedule model and schedules table are deleted
+
+    Route::middleware('role:admin_lab,asisten_lab,admin,asisten')->group(function () {
         // Equipment
         Route::get('/equipment', [EquipmentApiController::class, 'index']);
         Route::get('/equipment/{id}', [EquipmentApiController::class, 'show']);
@@ -117,4 +115,11 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/damage-reports/{id}', [DamageReportApiController::class, 'show']);
     Route::post('/damage-reports', [DamageReportApiController::class, 'store']);
     Route::put('/damage-reports/{id}/status', [DamageReportApiController::class, 'updateStatus']);
+
+    // Patrol Schedules (Revisi)
+    Route::get('/patrol-schedules', [PatrolScheduleApiController::class, 'index']);
+    Route::get('/patrol-schedules/{id}', [PatrolScheduleApiController::class, 'show']);
+    Route::post('/patrol-schedules', [PatrolScheduleApiController::class, 'store']);
+    Route::put('/patrol-schedules/{id}', [PatrolScheduleApiController::class, 'update']);
+    Route::delete('/patrol-schedules/{id}', [PatrolScheduleApiController::class, 'destroy']);
 });

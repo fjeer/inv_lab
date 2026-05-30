@@ -3,7 +3,9 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasManyThrough;
 
 class Laboratory extends Model
 {
@@ -20,12 +22,12 @@ class Laboratory extends Model
 
     /* ---- Relationships ---- */
 
-    public function responsiblePerson()
+    public function responsiblePerson(): BelongsTo
     {
         return $this->belongsTo(User::class, 'responsible_person_id');
     }
 
-    public function room()
+    public function room(): BelongsTo
     {
         return $this->belongsTo(Room::class);
     }
@@ -35,14 +37,23 @@ class Laboratory extends Model
         return $this->hasMany(Equipment::class, 'laboratory_id');
     }
 
-    public function schedules(): HasMany
+
+    public function patrolSchedules(): HasMany
     {
-        return $this->hasMany(LabSchedule::class);
+        return $this->hasMany(PatrolSchedule::class);
     }
 
     public function borrowings(): HasMany
     {
         return $this->hasMany(LabBorrowing::class);
+    }
+
+    /**
+     * Get all equipment items through equipment in this lab.
+     */
+    public function equipmentItems(): HasManyThrough
+    {
+        return $this->hasManyThrough(EquipmentItem::class, Equipment::class);
     }
 
     /* ---- Scopes ---- */

@@ -8,12 +8,15 @@ use App\Http\Controllers\EquipmentConditionController;
 use App\Http\Controllers\EquipmentController;
 use App\Http\Controllers\LabBorrowingController;
 use App\Http\Controllers\LaboratoryController;
-use App\Http\Controllers\LabScheduleController;
 use App\Http\Controllers\ProcurementController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\BuildingController;
 use App\Http\Controllers\RoomController;
+use App\Http\Controllers\PatrolScheduleController;
+use App\Livewire\Admin\QrCodePrint;
+use App\Livewire\Admin\RoleManagement;
+use App\Livewire\Asisten\PatrolExecution;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -46,16 +49,12 @@ Route::middleware('auth')->group(function () {
     Route::put('/profile/password', [ProfileController::class, 'updatePassword'])->name('profile.password');
 
     // Equipment (restricted to non-pengguna)
-    Route::middleware('role:admin_lab,asisten_lab')->group(function () {
+    Route::middleware('role:admin_lab,asisten_lab,admin,asisten')->group(function () {
         Route::get('/equipment', [EquipmentController::class, 'index'])->name('equipment.index');
         Route::get('/equipment/{equipment}', [EquipmentController::class, 'show'])->name('equipment.show');
     });
 
-    // Schedules (read for all)
-    Route::get('/schedules', [LabScheduleController::class, 'index'])->name('schedules.index');
-    Route::get('/schedules/{schedule}', [LabScheduleController::class, 'show'])->name('schedules.show');
-
-    // Borrowings (all roles can view, pengguna can create)
+    // Equipment (restricted to non-pengguna)
     Route::get('/borrowings', [LabBorrowingController::class, 'index'])->name('borrowings.index');
     Route::get('/borrowings/schedule', [LabBorrowingController::class, 'schedule'])->name('borrowings.schedule');
     Route::get('/borrowings/create', [LabBorrowingController::class, 'create'])->name('borrowings.create');
@@ -84,7 +83,7 @@ Route::middleware('auth')->group(function () {
     | Admin & Asisten Routes
     |----------------------------------------------------------------------
     */
-    Route::middleware('role:admin_lab,asisten_lab')->group(function () {
+    Route::middleware('role:admin_lab,asisten_lab,admin,asisten')->group(function () {
         // Equipment Management
         Route::get('/equipment-create', [EquipmentController::class, 'create'])->name('equipment.create');
         Route::post('/equipment', [EquipmentController::class, 'store'])->name('equipment.store');
@@ -94,13 +93,6 @@ Route::middleware('auth')->group(function () {
 
         // Categories
         Route::resource('categories', EquipmentCategoryController::class)->except(['show']);
-
-        // Schedules CRUD
-        Route::get('/schedules-create', [LabScheduleController::class, 'create'])->name('schedules.create');
-        Route::post('/schedules', [LabScheduleController::class, 'store'])->name('schedules.store');
-        Route::get('/schedules/{schedule}/edit', [LabScheduleController::class, 'edit'])->name('schedules.edit');
-        Route::put('/schedules/{schedule}', [LabScheduleController::class, 'update'])->name('schedules.update');
-        Route::delete('/schedules/{schedule}', [LabScheduleController::class, 'destroy'])->name('schedules.destroy');
 
         // Borrowing management (approve/reject/complete/delete)
         Route::post('/borrowings/{borrowing}/approve', [LabBorrowingController::class, 'approve'])->name('borrowings.approve');
@@ -116,6 +108,9 @@ Route::middleware('auth')->group(function () {
 
         // Damage report status management
         Route::put('/damage-reports/{damage_report}/status', [DamageReportController::class, 'updateStatus'])->name('damage-reports.update-status');
+
+        // Patrol Execution (Asisten)
+        Route::get('/patrol/{scheduleId}', PatrolExecution::class)->name('patrol.execute');
     });
 
     /*
@@ -123,7 +118,7 @@ Route::middleware('auth')->group(function () {
     | Admin Only Routes
     |----------------------------------------------------------------------
     */
-    Route::middleware('role:admin_lab')->group(function () {
+    Route::middleware('role:admin_lab,admin')->group(function () {
         // Laboratories CRUD (Management)
         Route::get('/laboratories/create', [LaboratoryController::class, 'create'])->name('laboratories.create');
         Route::post('/laboratories', [LaboratoryController::class, 'store'])->name('laboratories.store');
@@ -142,5 +137,14 @@ Route::middleware('auth')->group(function () {
         Route::post('/procurements/{procurement}/approve', [ProcurementController::class, 'approve'])->name('procurements.approve');
         Route::post('/procurements/{procurement}/reject', [ProcurementController::class, 'reject'])->name('procurements.reject');
         Route::delete('/procurements/{procurement}', [ProcurementController::class, 'destroy'])->name('procurements.destroy');
+
+        // Role & Permission Management (Livewire)
+        Route::get('/roles', RoleManagement::class)->name('roles.index');
+
+        // QR Code Print (Livewire)
+        Route::get('/qr-codes', QrCodePrint::class)->name('qr-codes.index');
+
+        // Patrol Schedule Management (Standard Ajax + DataTables)
+        Route::get('/patrol-schedules', [PatrolScheduleController::class, 'index'])->name('patrol-schedules.index');
     });
 });

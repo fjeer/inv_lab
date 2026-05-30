@@ -2,12 +2,16 @@
 
 namespace Database\Seeders;
 
+use App\Models\Building;
 use App\Models\Equipment;
 use App\Models\EquipmentCategory;
 use App\Models\Laboratory;
+use App\Models\PatrolSchedule;
+use App\Models\Permission;
+use App\Models\Role;
+use App\Models\Room;
 use App\Models\User;
 use Illuminate\Database\Seeder;
-use Illuminate\Support\Facades\Hash;
 
 class DatabaseSeeder extends Seeder
 {
@@ -16,160 +20,260 @@ class DatabaseSeeder extends Seeder
      */
     public function run(): void
     {
-        // Users
-        User::create([
+        /* ---- Roles ---- */
+        $adminRole = Role::create([
+            'name' => 'admin',
+            'display_name' => 'Admin Lab',
+            'description' => 'Administrator laboratorium dengan akses penuh',
+        ]);
+
+        $asistenRole = Role::create([
+            'name' => 'asisten',
+            'display_name' => 'Asisten Lab',
+            'description' => 'Asisten laboratorium untuk patroli dan monitoring alat',
+        ]);
+
+        $userRole = Role::create([
+            'name' => 'user',
+            'display_name' => 'Pengguna',
+            'description' => 'Pengguna umum yang dapat melihat kondisi lab',
+            'is_default' => true,
+        ]);
+
+        /* ---- Permissions ---- */
+        $permissionsData = [
+            // Equipment
+            ['name' => 'manage-equipment', 'display_name' => 'Kelola Alat Lab', 'group' => 'equipment'],
+            ['name' => 'view-equipment', 'display_name' => 'Lihat Alat Lab', 'group' => 'equipment'],
+            ['name' => 'print-qrcode', 'display_name' => 'Cetak QR Code', 'group' => 'equipment'],
+
+            // Patrol
+            ['name' => 'manage-patrol-schedule', 'display_name' => 'Kelola Jadwal Patroli', 'group' => 'patrol'],
+            ['name' => 'execute-patrol', 'display_name' => 'Laksanakan Patroli', 'group' => 'patrol'],
+            ['name' => 'view-patrol-logs', 'display_name' => 'Lihat Log Patroli', 'group' => 'patrol'],
+
+            // Users & Roles
+            ['name' => 'manage-users', 'display_name' => 'Kelola Pengguna', 'group' => 'users'],
+            ['name' => 'manage-roles', 'display_name' => 'Kelola Role & Hak Akses', 'group' => 'users'],
+
+            // Labs
+            ['name' => 'manage-labs', 'display_name' => 'Kelola Laboratorium', 'group' => 'labs'],
+            ['name' => 'view-labs', 'display_name' => 'Lihat Laboratorium', 'group' => 'labs'],
+            ['name' => 'view-lab-conditions', 'display_name' => 'Lihat Kondisi Lab', 'group' => 'labs'],
+
+            // Borrowings
+            ['name' => 'manage-borrowings', 'display_name' => 'Kelola Peminjaman', 'group' => 'borrowings'],
+            ['name' => 'create-borrowing', 'display_name' => 'Ajukan Peminjaman', 'group' => 'borrowings'],
+
+            // Reports
+            ['name' => 'manage-damage-reports', 'display_name' => 'Kelola Laporan Kerusakan', 'group' => 'reports'],
+            ['name' => 'create-damage-report', 'display_name' => 'Buat Laporan Kerusakan', 'group' => 'reports'],
+
+            // Procurements
+            ['name' => 'manage-procurements', 'display_name' => 'Kelola Pengadaan', 'group' => 'procurements'],
+            ['name' => 'create-procurement', 'display_name' => 'Ajukan Pengadaan', 'group' => 'procurements'],
+        ];
+
+        $permissions = collect($permissionsData)->map(fn ($p) => Permission::create($p));
+
+        // Admin gets all permissions
+        $adminRole->permissions()->attach($permissions->pluck('id'));
+
+        // Asisten gets specific permissions
+        $asistenRole->permissions()->attach(
+            $permissions->whereIn('name', [
+                'view-equipment', 'execute-patrol', 'view-patrol-logs',
+                'view-labs', 'view-lab-conditions',
+                'manage-borrowings', 'create-borrowing',
+                'create-damage-report', 'create-procurement',
+            ])->pluck('id')
+        );
+
+        // User gets limited permissions
+        $userRole->permissions()->attach(
+            $permissions->whereIn('name', [
+                'view-labs', 'view-lab-conditions',
+                'create-borrowing', 'create-damage-report', 'create-procurement',
+            ])->pluck('id')
+        );
+
+        /* ---- Users ---- */
+        $admin = User::create([
             'name' => 'Admin Lab',
             'email' => 'admin@invlab.test',
-            'password' => Hash::make('password'),
+            'password' => 'password',
             'role' => 'admin_lab',
-            'nim_nip' => '198501012020011001',
+            'role_id' => $adminRole->id,
+            'nim_nip' => '198001012005011001',
             'phone' => '081234567890',
             'department' => 'Teknik Informatika',
             'is_active' => true,
         ]);
 
-        User::create([
-            'name' => 'Asisten Lab 1',
+        $asisten1 = User::create([
+            'name' => 'Budi Asisten',
             'email' => 'asisten@invlab.test',
-            'password' => Hash::make('password'),
+            'password' => 'password',
             'role' => 'asisten_lab',
-            'nim_nip' => '20210001',
+            'role_id' => $asistenRole->id,
+            'nim_nip' => '2021001001',
             'phone' => '081234567891',
             'department' => 'Teknik Informatika',
             'is_active' => true,
         ]);
 
-        User::create([
-            'name' => 'Budi Santoso',
-            'email' => 'budi@invlab.test',
-            'password' => Hash::make('password'),
-            'role' => 'pengguna',
-            'nim_nip' => '20220015',
+        $asisten2 = User::create([
+            'name' => 'Sari Asisten',
+            'email' => 'asisten2@invlab.test',
+            'password' => 'password',
+            'role' => 'asisten_lab',
+            'role_id' => $asistenRole->id,
+            'nim_nip' => '2021001002',
             'phone' => '081234567892',
             'department' => 'Teknik Informatika',
             'is_active' => true,
         ]);
 
-        User::create([
-            'name' => 'Siti Rahayu',
-            'email' => 'siti@invlab.test',
-            'password' => Hash::make('password'),
+        $user = User::create([
+            'name' => 'Mahasiswa User',
+            'email' => 'user@invlab.test',
+            'password' => 'password',
             'role' => 'pengguna',
-            'nim_nip' => '20220030',
+            'role_id' => $userRole->id,
+            'nim_nip' => '2023001001',
             'phone' => '081234567893',
-            'department' => 'Sistem Informasi',
+            'department' => 'Teknik Informatika',
             'is_active' => true,
         ]);
 
-        // Categories
-        $categories = [];
-        foreach ([
-            ['name' => 'Komputer & Laptop', 'slug' => 'komputer-laptop', 'description' => 'PC Desktop, Laptop, dan perangkat komputasi'],
-            ['name' => 'Jaringan', 'slug' => 'jaringan', 'description' => 'Router, Switch, Kabel, dan perangkat jaringan'],
-            ['name' => 'Elektronika', 'slug' => 'elektronika', 'description' => 'Arduino, Sensor, Multimeter, dan komponen elektronik'],
-            ['name' => 'Multimedia', 'slug' => 'multimedia', 'description' => 'Kamera, Projector, Speaker, dan perangkat multimedia'],
-            ['name' => 'Peralatan Umum', 'slug' => 'peralatan-umum', 'description' => 'Meja, kursi, whiteboard, dan perlengkapan umum'],
-        ] as $cat) {
-            $categories[] = EquipmentCategory::create($cat);
-        }
+        /* ---- Buildings → Rooms → Labs ---- */
+        $building = Building::create([
+            'name' => 'Gedung A',
+            'code' => 'GA',
+            'description' => 'Gedung utama Fakultas Teknik',
+        ]);
 
-        // Laboratories
-        $labs = [];
-        $admin = User::where('role', 'admin_lab')->first();
-        $asisten = User::where('role', 'asisten_lab')->first();
-        foreach ([
-            ['name' => 'Lab Pemrograman', 'code' => 'LAB-PRG', 'location' => 'Gedung A Lt. 2 R.201', 'capacity' => 40, 'responsible_person_id' => $admin->id, 'status' => 'active', 'description' => 'Laboratorium untuk praktikum pemrograman dan pengembangan software'],
-            ['name' => 'Lab Jaringan', 'code' => 'LAB-NET', 'location' => 'Gedung A Lt. 3 R.301', 'capacity' => 30, 'responsible_person_id' => $asisten->id, 'status' => 'active', 'description' => 'Laboratorium jaringan komputer dan administrasi sistem'],
-            ['name' => 'Lab Multimedia', 'code' => 'LAB-MUL', 'location' => 'Gedung B Lt. 1 R.102', 'capacity' => 35, 'responsible_person_id' => $admin->id, 'status' => 'active', 'description' => 'Laboratorium multimedia, desain grafis, dan video editing'],
-            ['name' => 'Lab Elektronika', 'code' => 'LAB-ELK', 'location' => 'Gedung C Lt. 1 R.101', 'capacity' => 25, 'responsible_person_id' => $asisten->id, 'status' => 'active', 'description' => 'Laboratorium elektronika dasar dan mikrokontroler'],
-        ] as $lab) {
-            $labs[] = Laboratory::create($lab);
-        }
+        $room1 = Room::create([
+            'building_id' => $building->id,
+            'name' => 'Ruang 101',
+            'code' => 'R101',
+            'floor' => '1',
+        ]);
 
-        // Equipment for Lab Pemrograman
-        $pc_items = ['PC Desktop Core i7', 'PC Desktop Core i5', 'Monitor LED 24"'];
-        $idx = 1;
-        foreach ($pc_items as $name) {
-            Equipment::create([
-                'laboratory_id' => $labs[0]->id,
-                'category_id' => $categories[0]->id,
-                'name' => $name,
-                'code' => 'PRG-' . str_pad($idx, 3, '0', STR_PAD_LEFT),
-                'brand' => $idx <= 2 ? 'HP' : 'LG',
-                'model' => $idx <= 2 ? 'ProDesk 400 G7' : '24MK430H',
-                'year_acquired' => 2023,
-                'price' => $idx <= 2 ? 12000000 : 2500000,
-                'quantity' => $idx <= 2 ? 20 : 20,
+        $room2 = Room::create([
+            'building_id' => $building->id,
+            'name' => 'Ruang 201',
+            'code' => 'R201',
+            'floor' => '2',
+        ]);
+
+        $lab1 = Laboratory::create([
+            'name' => 'Lab Komputer Dasar',
+            'code' => 'LKD',
+            'room_id' => $room1->id,
+            'location' => 'Gedung A, Lantai 1',
+            'capacity' => 30,
+            'description' => 'Laboratorium untuk praktikum dasar komputer',
+            'responsible_person_id' => $admin->id,
+            'status' => 'active',
+        ]);
+
+        $lab2 = Laboratory::create([
+            'name' => 'Lab Jaringan',
+            'code' => 'LJR',
+            'room_id' => $room2->id,
+            'location' => 'Gedung A, Lantai 2',
+            'capacity' => 25,
+            'description' => 'Laboratorium untuk praktikum jaringan komputer',
+            'responsible_person_id' => $admin->id,
+            'status' => 'active',
+        ]);
+
+        /* ---- Equipment Categories ---- */
+        $catKomputer = EquipmentCategory::create(['name' => 'Komputer', 'description' => 'Perangkat komputer dan laptop']);
+        $catJaringan = EquipmentCategory::create(['name' => 'Jaringan', 'description' => 'Perangkat jaringan']);
+        $catElektronik = EquipmentCategory::create(['name' => 'Elektronik', 'description' => 'Perangkat elektronik umum']);
+
+        /* ---- Equipment + Auto-Generate Items with QR ---- */
+        $equipments = [
+            [
+                'laboratory_id' => $lab1->id,
+                'category_id' => $catKomputer->id,
+                'name' => 'PC Desktop',
+                'code' => 'EQ-001',
+                'brand' => 'Lenovo',
+                'quantity' => 5,
                 'condition' => 'baik',
                 'status' => 'available',
-                'description' => 'Unit ' . $name . ' untuk Lab Pemrograman',
-            ]);
-            $idx++;
-        }
-
-        // Equipment for Lab Jaringan
-        foreach ([
-            ['name' => 'Router Cisco 2901', 'code' => 'NET-001', 'brand' => 'Cisco', 'model' => '2901', 'price' => 15000000, 'qty' => 5],
-            ['name' => 'Switch Managed 24 Port', 'code' => 'NET-002', 'brand' => 'Cisco', 'model' => 'SG350-28', 'price' => 8000000, 'qty' => 8],
-            ['name' => 'UTP Crimping Tool', 'code' => 'NET-003', 'brand' => 'AMP', 'model' => 'Standard', 'price' => 250000, 'qty' => 15],
-            ['name' => 'LAN Tester', 'code' => 'NET-004', 'brand' => 'Fluke', 'model' => 'LinkIQ', 'price' => 5000000, 'qty' => 5],
-        ] as $eq) {
-            Equipment::create([
-                'laboratory_id' => $labs[1]->id,
-                'category_id' => $categories[1]->id,
-                'name' => $eq['name'],
-                'code' => $eq['code'],
-                'brand' => $eq['brand'],
-                'model' => $eq['model'],
-                'year_acquired' => 2022,
-                'price' => $eq['price'],
-                'quantity' => $eq['qty'],
+            ],
+            [
+                'laboratory_id' => $lab1->id,
+                'category_id' => $catElektronik->id,
+                'name' => 'Monitor LCD',
+                'code' => 'EQ-002',
+                'brand' => 'Samsung',
+                'quantity' => 5,
                 'condition' => 'baik',
                 'status' => 'available',
-            ]);
-        }
-
-        // Equipment for Lab Multimedia
-        foreach ([
-            ['name' => 'iMac 27"', 'code' => 'MUL-001', 'brand' => 'Apple', 'model' => 'iMac 2021', 'price' => 32000000, 'qty' => 10, 'cat' => 0],
-            ['name' => 'Projector HD', 'code' => 'MUL-002', 'brand' => 'Epson', 'model' => 'EB-X51', 'price' => 8500000, 'qty' => 2, 'cat' => 3],
-            ['name' => 'Kamera DSLR', 'code' => 'MUL-003', 'brand' => 'Canon', 'model' => 'EOS 80D', 'price' => 18000000, 'qty' => 5, 'cat' => 3],
-        ] as $eq) {
-            Equipment::create([
-                'laboratory_id' => $labs[2]->id,
-                'category_id' => $categories[$eq['cat']]->id,
-                'name' => $eq['name'],
-                'code' => $eq['code'],
-                'brand' => $eq['brand'],
-                'model' => $eq['model'],
-                'year_acquired' => 2023,
-                'price' => $eq['price'],
-                'quantity' => $eq['qty'],
+            ],
+            [
+                'laboratory_id' => $lab2->id,
+                'category_id' => $catJaringan->id,
+                'name' => 'Switch Managed',
+                'code' => 'EQ-003',
+                'brand' => 'Cisco',
+                'quantity' => 3,
                 'condition' => 'baik',
                 'status' => 'available',
-            ]);
+            ],
+            [
+                'laboratory_id' => $lab2->id,
+                'category_id' => $catJaringan->id,
+                'name' => 'Router',
+                'code' => 'EQ-004',
+                'brand' => 'MikroTik',
+                'quantity' => 2,
+                'condition' => 'baik',
+                'status' => 'available',
+            ],
+        ];
+
+        foreach ($equipments as $eqData) {
+            $eq = Equipment::create($eqData);
+            $eq->generateItems(); // Auto-generates individual items with QR codes
         }
 
-        // Equipment for Lab Elektronika
-        foreach ([
-            ['name' => 'Arduino Uno R3', 'code' => 'ELK-001', 'brand' => 'Arduino', 'model' => 'Uno R3', 'price' => 150000, 'qty' => 30],
-            ['name' => 'Multimeter Digital', 'code' => 'ELK-002', 'brand' => 'Sanwa', 'model' => 'CD800a', 'price' => 750000, 'qty' => 15],
-            ['name' => 'Oscilloscope Digital', 'code' => 'ELK-003', 'brand' => 'Siglent', 'model' => 'SDS1104X', 'price' => 7500000, 'qty' => 5],
-            ['name' => 'Power Supply DC', 'code' => 'ELK-004', 'brand' => 'UNI-T', 'model' => 'UTP3305', 'price' => 2000000, 'qty' => 10, 'condition' => 'rusak_ringan'],
-        ] as $eq) {
-            Equipment::create([
-                'laboratory_id' => $labs[3]->id,
-                'category_id' => $categories[2]->id,
-                'name' => $eq['name'],
-                'code' => $eq['code'],
-                'brand' => $eq['brand'],
-                'model' => $eq['model'],
-                'year_acquired' => 2021,
-                'price' => $eq['price'],
-                'quantity' => $eq['qty'],
-                'condition' => $eq['condition'] ?? 'baik',
-                'status' => 'available',
-            ]);
-        }
+        /* ---- Patrol Schedules ---- */
+        $todayDay = strtolower(now()->format('l'));
+
+        PatrolSchedule::create([
+            'user_id' => $asisten1->id,
+            'laboratory_id' => $lab1->id,
+            'day_of_week' => $todayDay,
+            'start_time' => '08:00',
+            'end_time' => '10:00',
+            'status' => 'active',
+            'notes' => 'Patroli pagi Lab Komputer Dasar',
+        ]);
+
+        PatrolSchedule::create([
+            'user_id' => $asisten1->id,
+            'laboratory_id' => $lab2->id,
+            'day_of_week' => $todayDay,
+            'start_time' => '10:00',
+            'end_time' => '12:00',
+            'status' => 'active',
+            'notes' => 'Patroli pagi Lab Jaringan',
+        ]);
+
+        PatrolSchedule::create([
+            'user_id' => $asisten2->id,
+            'laboratory_id' => $lab1->id,
+            'day_of_week' => $todayDay,
+            'start_time' => '13:00',
+            'end_time' => '15:00',
+            'status' => 'active',
+            'notes' => 'Patroli siang Lab Komputer Dasar',
+        ]);
     }
 }

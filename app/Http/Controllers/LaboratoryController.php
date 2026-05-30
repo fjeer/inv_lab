@@ -43,7 +43,7 @@ class LaboratoryController extends Controller
 
     public function show(Laboratory $laboratory)
     {
-        $laboratory->load(['room.building', 'equipment', 'schedules.user', 'borrowings.user', 'responsiblePerson']);
+        $laboratory->load(['room.building', 'equipment', 'borrowings.user', 'responsiblePerson']);
 
         return view('laboratories.show', compact('laboratory'));
     }

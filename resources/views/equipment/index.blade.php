@@ -7,7 +7,7 @@
         <h1 class="text-2xl font-bold text-slate-800">Kelola Alat Lab</h1>
         <p class="text-slate-500 text-sm mt-1">Daftar semua peralatan laboratorium kampus</p>
     </div>
-    @if(Auth::user()->hasRole('admin_lab', 'asisten_lab'))
+    @if(Auth::user()->hasRole('admin_lab', 'asisten_lab', 'admin', 'asisten'))
     <button onclick="openModal()" class="inline-flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-blue-600 to-indigo-600 text-white text-sm font-semibold rounded-xl shadow-lg shadow-blue-500/25 hover:shadow-blue-500/40 transition-all hover:-translate-y-0.5">
         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"/></svg>
         Tambah Alat
@@ -107,7 +107,7 @@ $(document).ready(function() {
         }
     });
 
-    const canManage = {{ Auth::user()->hasRole('admin_lab', 'asisten_lab') ? 'true' : 'false' }};
+    const canManage = {{ Auth::user()->hasRole('admin_lab', 'asisten_lab', 'admin', 'asisten') ? 'true' : 'false' }};
     const table = $('#equipment-table').DataTable({
         processing: true,
         serverSide: true,

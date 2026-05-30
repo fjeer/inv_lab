@@ -43,19 +43,18 @@
         </div>
         @endif
     </div>
-
     <div class="space-y-6">
-        {{-- Schedules --}}
+        {{-- Patrol Schedules (Revisi) --}}
         <div class="bg-white rounded-2xl border border-slate-100 shadow-sm">
-            <div class="px-5 py-4 border-b border-slate-100"><h3 class="font-semibold text-slate-700 text-sm">Jadwal Aktif</h3></div>
+            <div class="px-5 py-4 border-b border-slate-100"><h3 class="font-semibold text-slate-700 text-sm">Jadwal Patroli Aktif</h3></div>
             <div class="p-5">
-                @forelse($laboratory->schedules->where('status', 'active')->take(5) as $s)
+                @forelse($laboratory->patrolSchedules->take(5) as $s)
                 <div class="py-2 {{ !$loop->last ? 'border-b border-slate-50' : '' }}">
-                    <p class="text-xs font-medium text-slate-700">{{ $s->title }}</p>
-                    <p class="text-xs text-slate-400">{{ $s->day_label }} · {{ \Carbon\Carbon::parse($s->start_time)->format('H:i') }}-{{ \Carbon\Carbon::parse($s->end_time)->format('H:i') }}</p>
+                    <p class="text-xs font-medium text-slate-700">Patroli oleh {{ $s->user?->name ?? 'Asisten' }}</p>
+                    <p class="text-xs text-slate-400">{{ $s->day_label }} · {{ \Carbon\Carbon::parse($s->start_time)->format('H:i') }} - {{ \Carbon\Carbon::parse($s->end_time)->format('H:i') }}</p>
                 </div>
                 @empty
-                <p class="text-xs text-slate-400 text-center py-3">Belum ada jadwal</p>
+                <p class="text-xs text-slate-400 text-center py-3">Belum ada jadwal patroli</p>
                 @endforelse
             </div>
         </div>

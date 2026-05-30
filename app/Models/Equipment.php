@@ -48,6 +48,11 @@ class Equipment extends Model
         return $this->belongsTo(EquipmentCategory::class, 'category_id');
     }
 
+    public function items(): HasMany
+    {
+        return $this->hasMany(EquipmentItem::class);
+    }
+
     public function conditions(): HasMany
     {
         return $this->hasMany(EquipmentCondition::class);
@@ -93,5 +98,23 @@ class Equipment extends Model
     public function scopeByCondition($query, string $condition)
     {
         return $query->where('condition', $condition);
+    }
+
+    /* ---- Helpers ---- */
+
+    /**
+     * Generate individual EquipmentItems with QR codes based on quantity.
+     */
+    public function generateItems(): void
+    {
+        $existingCount = $this->items()->count();
+
+        for ($i = $existingCount + 1; $i <= $this->quantity; $i++) {
+            $this->items()->create([
+                'sequence_number' => $i,
+                'qr_code' => EquipmentItem::generateQrCode($this, $i),
+                'condition' => $this->condition ?? 'baik',
+            ]);
+        }
     }
 }

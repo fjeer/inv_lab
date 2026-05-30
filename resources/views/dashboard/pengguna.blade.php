@@ -51,13 +51,7 @@
         <p class="text-amber-100 text-sm mt-1">Laporkan alat yang rusak</p>
     </a>
 
-    <a href="{{ route('schedules.index') }}" class="group bg-gradient-to-br from-emerald-500 to-teal-600 rounded-2xl p-5 text-white shadow-lg shadow-emerald-500/20 hover:shadow-emerald-500/30 transition-all duration-300 hover:-translate-y-0.5">
-        <div class="w-11 h-11 bg-white/20 rounded-xl flex items-center justify-center mb-3 group-hover:bg-white/30 transition-colors">
-            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
-        </div>
-        <h3 class="font-semibold text-lg">Lihat Jadwal</h3>
-        <p class="text-emerald-100 text-sm mt-1">Jadwal penggunaan laboratorium</p>
-    </a>
+
     <a href="{{ route('laboratories.index') }}" class="group bg-gradient-to-br from-indigo-500 to-purple-600 rounded-2xl p-5 text-white shadow-lg shadow-indigo-500/20 hover:shadow-indigo-500/30 transition-all duration-300 hover:-translate-y-0.5">
         <div class="w-11 h-11 bg-white/20 rounded-xl flex items-center justify-center mb-3 group-hover:bg-white/30 transition-colors">
             <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/></svg>
@@ -67,7 +61,7 @@
     </a>
 </div>
 
-<div class="grid grid-cols-1 xl:grid-cols-2 gap-6">
+<div class="grid grid-cols-1 gap-6">
     {{-- My Borrowings --}}
     <div class="bg-white rounded-2xl border border-slate-100 shadow-sm">
         <div class="px-5 py-4 border-b border-slate-100 flex items-center justify-between">
@@ -95,26 +89,6 @@
         </div>
     </div>
 
-    {{-- Today Schedules --}}
-    <div class="bg-white rounded-2xl border border-slate-100 shadow-sm">
-        <div class="px-5 py-4 border-b border-slate-100">
-            <h2 class="font-semibold text-slate-700">Jadwal Hari Ini ({{ now()->translatedFormat('l, d F Y') }})</h2>
-        </div>
-        <div class="p-5">
-            @forelse($todaySchedules as $s)
-            <div class="flex items-center gap-3 py-3 {{ !$loop->last ? 'border-b border-slate-50' : '' }}">
-                <div class="w-9 h-9 rounded-xl bg-blue-50 flex items-center justify-center shrink-0">
-                    <svg class="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
-                </div>
-                <div class="flex-1 min-w-0">
-                    <p class="text-sm font-medium text-slate-700 truncate">{{ $s->title }}</p>
-                    <p class="text-xs text-slate-400">{{ $s->laboratory->name }} · {{ \Carbon\Carbon::parse($s->start_time)->format('H:i') }}-{{ \Carbon\Carbon::parse($s->end_time)->format('H:i') }}</p>
-                </div>
-            </div>
-            @empty
-            <p class="text-sm text-slate-400 text-center py-4">Tidak ada jadwal hari ini</p>
-            @endforelse
-        </div>
-    </div>
+
 </div>
 @endsection

@@ -4,33 +4,35 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
-class LabSchedule extends Model
+class PatrolSchedule extends Model
 {
     protected $fillable = [
-        'laboratory_id',
         'user_id',
-        'title',
+        'laboratory_id',
         'day_of_week',
         'start_time',
         'end_time',
-        'semester',
-        'academic_year',
-        'class_group',
         'status',
         'notes',
     ];
 
     /* ---- Relationships ---- */
 
+    public function user(): BelongsTo
+    {
+        return $this->belongsTo(User::class);
+    }
+
     public function laboratory(): BelongsTo
     {
         return $this->belongsTo(Laboratory::class);
     }
 
-    public function user(): BelongsTo
+    public function patrolLogs(): HasMany
     {
-        return $this->belongsTo(User::class);
+        return $this->hasMany(PatrolLog::class);
     }
 
     /* ---- Accessors ---- */
@@ -54,5 +56,15 @@ class LabSchedule extends Model
     public function scopeActive($query)
     {
         return $query->where('status', 'active');
+    }
+
+    public function scopeForToday($query)
+    {
+        return $query->where('day_of_week', strtolower(now()->format('l')));
+    }
+
+    public function scopeForUser($query, int $userId)
+    {
+        return $query->where('user_id', $userId);
     }
 }
