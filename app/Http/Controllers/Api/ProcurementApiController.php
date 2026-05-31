@@ -119,7 +119,7 @@ class ProcurementApiController extends BaseApiController
 
     public function approve(Request $request, $id)
     {
-        $procurement = Procurement::find($id);
+        $procurement = Procurement::with('items')->find($id);
         if (!$procurement) {
             return $this->sendError('Pengadaan tidak ditemukan');
         }
@@ -129,6 +129,36 @@ class ProcurementApiController extends BaseApiController
             'approved_by' => $request->user()->id,
             'approved_at' => now()
         ]);
+
+        // Process replacements and inventory injection
+        foreach ($procurement->items as $procurementItem) {
+            if ($procurementItem->replaces_equipment_item_id) {
+                // Find target equipment item that is being replaced
+                $oldItem = \App\Models\EquipmentItem::find($procurementItem->replaces_equipment_item_id);
+                if ($oldItem) {
+                    $equipment = $oldItem->equipment;
+                    if ($equipment) {
+                        // Increase the equipment quantity by the amount ordered
+                        $newQuantity = $equipment->quantity + $procurementItem->quantity;
+                        $equipment->update(['quantity' => $newQuantity]);
+                        
+                        // Link the newly created item to the old replaced item
+                        // In generateItems(), new items are created. We look for the newly created items and link them.
+                        $newItems = \App\Models\EquipmentItem::where('equipment_id', $equipment->id)
+                            ->whereNull('replaces_equipment_item_id')
+                            ->orderBy('id', 'desc')
+                            ->take($procurementItem->quantity)
+                            ->get();
+
+                        foreach ($newItems as $newItem) {
+                            $newItem->update([
+                                'replaces_equipment_item_id' => $oldItem->id
+                            ]);
+                        }
+                    }
+                }
+            }
+        }
 
         return $this->sendSuccess($procurement, 'Pengadaan berhasil disetujui');
     }
