@@ -75,7 +75,18 @@ $(document).ready(function() {
                     return data ? data.substring(0, 10) : '-';
                 }
             },
-            { data: 'equipment.name', className: 'px-5 py-4 font-medium text-slate-700' },
+            { 
+                data: 'equipment.name', 
+                className: 'px-5 py-4 font-medium text-slate-700',
+                render: function(data, type, row) {
+                    let name = data;
+                    let item = row.equipment_item || row.equipmentItem;
+                    if (item && item.qr_code) {
+                        name += `<br><span class="text-xs font-mono text-slate-400 bg-slate-50 border border-slate-100 rounded px-1">${item.qr_code}</span>`;
+                    }
+                    return name;
+                }
+            },
             { data: 'equipment.laboratory.name', className: 'px-5 py-4 text-slate-600' },
             { data: 'reporter.name', className: 'px-5 py-4 text-slate-600' },
             { 

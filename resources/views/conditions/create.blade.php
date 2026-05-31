@@ -18,14 +18,20 @@
                 <select name="laboratory_id" id="laboratory_id" required class="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/30">
                     <option value="">Pilih Lab</option>
                     @foreach($laboratories as $lab)
-                    <option value="{{ $lab->id }}" {{ old('laboratory_id') == $lab->id ? 'selected' : '' }}>{{ $lab->name }}</option>
+                    <option value="{{ $lab->id }}" {{ request('lab_id', old('laboratory_id')) == $lab->id ? 'selected' : '' }}>{{ $lab->name }}</option>
                     @endforeach
                 </select>
             </div>
             <div>
                 <label class="block text-sm font-medium text-slate-700 mb-1.5">Alat *</label>
-                <select name="equipment_id" id="equipment_id" required disabled class="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/30" data-old="{{ old('equipment_id') }}">
+                <select name="equipment_id" id="equipment_id" required disabled class="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/30" data-old="{{ request('eq_id', old('equipment_id')) }}">
                     <option value="">Pilih Alat</option>
+                </select>
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-slate-700 mb-1.5">Kode Unik / Item *</label>
+                <select name="equipment_item_id" id="equipment_item_id" required disabled class="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/30" data-old="{{ request('item_id', old('equipment_item_id')) }}">
+                    <option value="">Pilih Item</option>
                 </select>
             </div>
             <div><label class="block text-sm font-medium text-slate-700 mb-1.5">Kondisi *</label>
@@ -53,9 +59,12 @@
     const equipmentList = @json($equipmentList);
     const labSelect = document.getElementById('laboratory_id');
     const eqSelect = document.getElementById('equipment_id');
+    const itemSelect = document.getElementById('equipment_item_id');
 
     function updateEquipmentOptions(labId) {
         eqSelect.innerHTML = '<option value="">Pilih Alat</option>';
+        itemSelect.innerHTML = '<option value="">Pilih Item</option>';
+        itemSelect.disabled = true;
         
         if (labId) {
             const filtered = equipmentList.filter(eq => eq.laboratory_id == labId);
@@ -72,6 +81,7 @@
                 const oldEq = eqSelect.dataset.old;
                 if (oldEq) {
                     eqSelect.value = oldEq;
+                    updateItemOptions(oldEq);
                 }
             } else {
                 eqSelect.disabled = true;
@@ -81,8 +91,39 @@
         }
     }
 
+    function updateItemOptions(eqId) {
+        itemSelect.innerHTML = '<option value="">Pilih Item</option>';
+        
+        if (eqId) {
+            const eq = equipmentList.find(e => e.id == eqId);
+            if (eq && eq.items && eq.items.length > 0) {
+                eq.items.forEach(item => {
+                    const option = document.createElement('option');
+                    option.value = item.id;
+                    option.textContent = `${item.qr_code} - [${item.condition.toUpperCase()}]`;
+                    itemSelect.appendChild(option);
+                });
+                itemSelect.disabled = false;
+                
+                // Set old value if exists
+                const oldItem = itemSelect.dataset.old;
+                if (oldItem) {
+                    itemSelect.value = oldItem;
+                }
+            } else {
+                itemSelect.disabled = true;
+            }
+        } else {
+            itemSelect.disabled = true;
+        }
+    }
+
     labSelect.addEventListener('change', function() {
         updateEquipmentOptions(this.value);
+    });
+
+    eqSelect.addEventListener('change', function() {
+        updateItemOptions(this.value);
     });
 
     // Initialize on load

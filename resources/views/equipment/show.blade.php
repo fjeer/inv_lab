@@ -37,6 +37,56 @@
             @endif
         </div>
 
+        {{-- Physical Items List --}}
+        <div class="bg-white rounded-2xl border border-slate-100 shadow-sm">
+            <div class="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
+                <h2 class="font-semibold text-slate-700">Daftar Item Fisik (Stok)</h2>
+                <span class="text-xs bg-slate-100 text-slate-600 px-2.5 py-1 rounded-full font-medium">{{ $equipment->items->count() }} Total</span>
+            </div>
+            <div class="p-6 overflow-x-auto">
+                <table class="w-full text-sm">
+                    <thead>
+                        <tr class="bg-slate-50/50">
+                            <th class="text-left px-4 py-2 font-semibold text-slate-600">No. Urut</th>
+                            <th class="text-left px-4 py-2 font-semibold text-slate-600">QR Code / Kode Unik</th>
+                            <th class="text-center px-4 py-2 font-semibold text-slate-600">Kondisi</th>
+                            <th class="text-left px-4 py-2 font-semibold text-slate-600">Histori Penggantian</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-slate-50">
+                        @forelse($equipment->items as $item)
+                        <tr>
+                            <td class="px-4 py-3 font-medium text-slate-700">#{{ $item->sequence_number }}</td>
+                            <td class="px-4 py-3 font-mono text-xs text-slate-600">{{ $item->qr_code }}</td>
+                            <td class="px-4 py-3 text-center">
+                                <span class="text-xs px-2.5 py-0.5 rounded-full font-medium 
+                                    {{ $item->condition === 'baik' ? 'bg-emerald-50 text-emerald-700' : '' }}
+                                    {{ $item->condition === 'rusak_ringan' ? 'bg-amber-50 text-amber-700' : '' }}
+                                    {{ $item->condition === 'rusak_berat' ? 'bg-red-50 text-red-700' : '' }}
+                                    {{ $item->condition === 'hilang' ? 'bg-slate-100 text-slate-600' : '' }}
+                                ">{{ $item->condition_label }}</span>
+                            </td>
+                            <td class="px-4 py-3 text-xs text-slate-500">
+                                @if($item->replacesEquipmentItem)
+                                    <div class="flex flex-col gap-0.5 text-amber-600">
+                                        <span class="font-medium">Menggantikan:</span>
+                                        <span class="font-mono text-[10px] bg-amber-50 border border-amber-100 px-1 py-0.5 rounded">{{ $item->replacesEquipmentItem->qr_code }}</span>
+                                    </div>
+                                @else
+                                    <span class="text-slate-400">-</span>
+                                @endif
+                            </td>
+                        </tr>
+                        @empty
+                        <tr>
+                            <td colspan="4" class="text-center text-slate-400 py-4">Belum ada item fisik terdaftar</td>
+                        </tr>
+                        @endforelse
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
         {{-- Condition History --}}
         <div class="bg-white rounded-2xl border border-slate-100 shadow-sm">
             <div class="px-6 py-4 border-b border-slate-100">

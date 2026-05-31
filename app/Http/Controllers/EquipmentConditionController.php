@@ -11,7 +11,7 @@ class EquipmentConditionController extends Controller
 {
     public function index(Request $request)
     {
-        $query = EquipmentCondition::with(['equipment.laboratory', 'checker']);
+        $query = EquipmentCondition::with(['equipment.laboratory', 'equipmentItem', 'checker']);
 
         if ($request->filled('laboratory_id')) {
             $query->whereHas('equipment', function ($q) use ($request) {
@@ -34,17 +34,17 @@ class EquipmentConditionController extends Controller
         return view('conditions.index', compact('conditions', 'laboratories', 'equipmentList'));
     }
 
-    public function create()
+    public function create(Request $request)
     {
         $laboratories = Laboratory::orderBy('name')->get();
-        $equipmentList = Equipment::with('laboratory')->orderBy('name')->get();
+        $equipmentList = Equipment::with(['laboratory', 'items'])->orderBy('name')->get();
 
         return view('conditions.create', compact('laboratories', 'equipmentList'));
     }
 
     public function show(EquipmentCondition $condition)
     {
-        $condition->load(['equipment.laboratory', 'checker']);
+        $condition->load(['equipment.laboratory', 'equipmentItem', 'checker']);
 
         return view('conditions.show', compact('condition'));
     }

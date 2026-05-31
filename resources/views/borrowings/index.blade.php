@@ -94,7 +94,7 @@ $(document).ready(function() {
                 className: 'px-5 py-4 text-right',
                 render: (data, type, row) => {
                     let actions = `<a href="/borrowings/${data}" class="text-blue-600 hover:text-blue-700 font-medium mr-3">Detail</a>`;
-                    @if(Auth::user()->hasRole('admin_lab', 'asisten_lab'))
+                    @if(Auth::user()->hasRole('admin_lab', 'asisten_lab', 'admin', 'asisten'))
                         if(row.status === 'pending') {
                             actions += `<button onclick="approveBorrowing(${data})" class="text-emerald-600 hover:text-emerald-700 font-medium mr-3">Setujui</button>`;
                         }

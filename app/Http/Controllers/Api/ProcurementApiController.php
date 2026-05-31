@@ -10,7 +10,7 @@ class ProcurementApiController extends BaseApiController
 {
     public function index(Request $request)
     {
-        $query = Procurement::with(['requester', 'items']);
+        $query = Procurement::with(['requester', 'items.replacesEquipment', 'items.replacesEquipmentItem']);
 
         // Non-admin can only see their own
         if ($request->user() && $request->user()->role !== 'admin_lab') {
@@ -49,7 +49,7 @@ class ProcurementApiController extends BaseApiController
 
     public function show($id)
     {
-        $procurement = Procurement::with(['requester', 'items', 'approver'])->find($id);
+        $procurement = Procurement::with(['requester', 'items.replacesEquipment', 'items.replacesEquipmentItem', 'approver'])->find($id);
 
         if (!$procurement) {
             return $this->sendError('Pengadaan tidak ditemukan');
@@ -71,6 +71,7 @@ class ProcurementApiController extends BaseApiController
             'priority' => 'required|in:low,medium,high,urgent',
             'items' => 'required|array|min:1',
             'items.*.item_name' => 'required|string|max:255',
+            'items.*.replaces_equipment_item_id' => 'nullable|exists:equipment_items,id',
             'items.*.quantity' => 'required|integer|min:1',
             'items.*.unit' => 'required|string|max:50',
             'items.*.estimated_price' => 'required|numeric|min:0',
@@ -96,8 +97,15 @@ class ProcurementApiController extends BaseApiController
         ]);
 
         foreach ($items as $item) {
+            $replacesEqItemId = $item['replaces_equipment_item_id'] ?? null;
+            $replacesEqId = null;
+            if ($replacesEqItemId) {
+                $replacesEqId = \App\Models\EquipmentItem::find($replacesEqItemId)?->equipment_id;
+            }
             $procurement->items()->create([
                 'item_name' => $item['item_name'],
+                'replaces_equipment_id' => $replacesEqId,
+                'replaces_equipment_item_id' => $replacesEqItemId,
                 'specification' => $item['specification'] ?? null,
                 'quantity' => $item['quantity'],
                 'unit' => $item['unit'],

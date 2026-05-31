@@ -9,6 +9,7 @@ class EquipmentCondition extends Model
 {
     protected $fillable = [
         'equipment_id',
+        'equipment_item_id',
         'checked_by',
         'condition',
         'previous_condition',
@@ -30,6 +31,11 @@ class EquipmentCondition extends Model
     public function equipment(): BelongsTo
     {
         return $this->belongsTo(Equipment::class);
+    }
+
+    public function equipmentItem(): BelongsTo
+    {
+        return $this->belongsTo(EquipmentItem::class, 'equipment_item_id');
     }
 
     public function checker(): BelongsTo

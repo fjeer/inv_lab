@@ -51,7 +51,23 @@
                     <tbody class="divide-y divide-slate-50">
                         @foreach($procurement->items as $item)
                         <tr>
-                            <td class="px-5 py-3 font-medium text-slate-700">{{ $item->item_name }}</td>
+                            <td class="px-5 py-3 font-medium text-slate-700">
+                                {{ $item->item_name }}
+                                @if($item->replacesEquipmentItem)
+                                <div class="mt-1 flex flex-col gap-1 text-xs text-amber-600 bg-amber-50 px-2 py-1.5 rounded-md inline-block w-max">
+                                    <div class="flex items-center gap-1 font-semibold">
+                                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+                                        Pengganti: {{ $item->replacesEquipmentItem->equipment->name }}
+                                    </div>
+                                    <span class="font-mono bg-white px-1.5 py-0.5 rounded border border-amber-200 w-max text-[10px]">{{ $item->replacesEquipmentItem->qr_code }}</span>
+                                </div>
+                                @elseif($item->replacesEquipment)
+                                <div class="mt-1 flex items-center gap-1 text-xs text-amber-600 bg-amber-50 px-2 py-0.5 rounded-md inline-block w-max">
+                                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+                                    Pengganti: {{ $item->replacesEquipment->name }}
+                                </div>
+                                @endif
+                            </td>
                             <td class="px-5 py-3 text-slate-600 text-xs">{{ $item->specification ?? '-' }}</td>
                             <td class="px-5 py-3 text-center text-slate-600">{{ $item->quantity }}</td>
                             <td class="px-5 py-3 text-center text-slate-600">{{ $item->unit }}</td>
@@ -67,7 +83,7 @@
     </div>
 
     {{-- Admin Actions --}}
-    @if(Auth::user()->isAdmin() && in_array($procurement->status, ['submitted', 'in_review']))
+    @if(Auth::user()->hasRole('admin_lab', 'admin') && in_array($procurement->status, ['submitted', 'in_review']))
     <div class="space-y-4">
         <div class="bg-white rounded-2xl border border-slate-100 shadow-sm p-5 space-y-3">
             <h3 class="font-semibold text-slate-700 text-sm">Kelola Pengadaan</h3>

@@ -51,7 +51,7 @@
 
     {{-- Action Sidebar --}}
     <div class="space-y-4">
-        @if(Auth::user()->hasRole('admin_lab', 'asisten_lab') && $borrowing->status === 'pending')
+        @if(Auth::user()->hasRole('admin_lab', 'asisten_lab', 'admin', 'asisten') && $borrowing->status === 'pending')
         <div class="bg-white rounded-2xl border border-slate-100 shadow-sm p-5 space-y-3">
             <h3 class="font-semibold text-slate-700 text-sm">Kelola Peminjaman</h3>
             <form id="approve-form">@csrf
@@ -64,7 +64,7 @@
         </div>
         @endif
 
-        @if(Auth::user()->hasRole('admin_lab', 'asisten_lab') && $borrowing->status === 'approved')
+        @if(Auth::user()->hasRole('admin_lab', 'asisten_lab', 'admin', 'asisten') && $borrowing->status === 'approved')
         <div class="bg-white rounded-2xl border border-slate-100 shadow-sm p-5">
             <form id="complete-form">@csrf
                 <button type="submit" class="w-full py-2.5 text-sm font-semibold text-white bg-emerald-600 rounded-xl hover:bg-emerald-500 transition-colors">Selesaikan Peminjaman</button>

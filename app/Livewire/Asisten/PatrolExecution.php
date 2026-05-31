@@ -2,6 +2,7 @@
 
 namespace App\Livewire\Asisten;
 
+use App\Models\EquipmentCondition;
 use App\Models\EquipmentItem;
 use App\Models\PatrolLog;
 use App\Models\PatrolSchedule;
@@ -130,6 +131,17 @@ class PatrolExecution extends Component
             'condition_notes' => $this->conditionNotes ?: $item->condition_notes,
             'last_checked_at' => now(),
             'last_checked_by' => auth()->id(),
+        ]);
+
+        // Record in EquipmentCondition module (Kondisi Barang)
+        EquipmentCondition::create([
+            'equipment_id' => $item->equipment_id,
+            'equipment_item_id' => $item->id,
+            'checked_by' => auth()->id(),
+            'condition' => $this->selectedCondition,
+            'previous_condition' => $previousCondition,
+            'check_date' => now()->toDateString(),
+            'description' => $this->conditionNotes ?: 'Pemeriksaan via patroli lab',
         ]);
 
         // Reset scan state

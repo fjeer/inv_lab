@@ -14,7 +14,11 @@ class EquipmentApiController extends BaseApiController
      */
     public function index(Request $request)
     {
-        $query = Equipment::with(['laboratory', 'category']);
+        $query = Equipment::with(['laboratory', 'category'])
+            ->withCount([
+                'items',
+                'items as items_baik_count' => fn ($q) => $q->where('condition', 'baik'),
+            ]);
 
         // DataTables search
         if ($request->filled('search.value')) {
@@ -144,5 +148,27 @@ class EquipmentApiController extends BaseApiController
         );
 
         return $this->sendSuccess(null, 'Alat berhasil dihapus');
+    }
+
+    /**
+     * Scan QR code to get Equipment Item data.
+     */
+    public function scanQr(Request $request)
+    {
+        $qrCode = $request->input('qr_code');
+
+        if (!$qrCode) {
+            return $this->sendError('QR Code tidak boleh kosong', [], 400);
+        }
+
+        $item = \App\Models\EquipmentItem::where('qr_code', $qrCode)
+            ->with(['equipment.laboratory'])
+            ->first();
+
+        if (!$item) {
+            return $this->sendError('Alat tidak ditemukan dari QR Code ini', [], 404);
+        }
+
+        return $this->sendSuccess($item, 'Alat ditemukan');
     }
 }

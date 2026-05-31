@@ -5,8 +5,8 @@ namespace App\Http\Controllers\Api;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Facades\Validator;
-use Illuminate\Validation\Rule;
+use App\Http\Requests\StoreUserRequest;
+use App\Http\Requests\UpdateUserRequest;
 
 class UserApiController extends BaseApiController
 {
@@ -52,55 +52,41 @@ class UserApiController extends BaseApiController
         return $this->sendSuccess($user, 'Detail ditemukan');
     }
 
-    public function store(Request $request)
+    public function store(StoreUserRequest $request)
     {
-        $validator = Validator::make($request->all(), [
-            'name' => 'required|string|max:255',
-            'email' => 'required|string|email|max:255|unique:users',
-            'password' => 'required|string|min:8',
-            'role' => 'required|in:admin_lab,asisten_lab,pengguna',
-            'nim_nip' => 'nullable|string|max:50',
-            'phone' => 'nullable|string|max:20',
-            'department' => 'nullable|string|max:100',
-        ]);
-
-        if ($validator->fails()) {
-            return $this->sendError('Validation Error', $validator->errors()->toArray(), 422);
-        }
+        $validated = $request->validated();
 
         $user = User::create([
-            'name' => $request->name,
-            'email' => $request->email,
-            'password' => Hash::make($request->password),
-            'role' => $request->role,
-            'nim_nip' => $request->nim_nip,
-            'phone' => $request->phone,
-            'department' => $request->department,
+            'name' => $validated['name'],
+            'email' => $validated['email'],
+            'password' => Hash::make($validated['password']),
+            'role' => $validated['role'],
+            'nim_nip' => $validated['nim_nip'] ?? null,
+            'phone' => $validated['phone'] ?? null,
+            'department' => $validated['department'] ?? null,
             'is_active' => true,
         ]);
 
         return $this->sendSuccess($user, 'Pengguna berhasil dibuat', 201);
     }
 
-    public function update(Request $request, $id)
+    public function update(UpdateUserRequest $request, $id)
     {
         $user = User::findOrFail($id);
+        $validated = $request->validated();
 
-        $validator = Validator::make($request->all(), [
-            'name' => 'required|string|max:255',
-            'email' => ['required', 'string', 'email', 'max:255', Rule::unique('users')->ignore($user->id)],
-            'role' => 'required|in:admin_lab,asisten_lab,pengguna',
-            'nim_nip' => 'nullable|string|max:50',
+        $user->update([
+            'name' => $validated['name'],
+            'email' => $validated['email'],
+            'role' => $validated['role'],
+            'nim_nip' => $validated['nim_nip'] ?? null,
+            'phone' => $validated['phone'] ?? null,
+            'department' => $validated['department'] ?? null,
+            'is_active' => $validated['is_active'] ?? $user->is_active,
         ]);
 
-        if ($validator->fails()) {
-            return $this->sendError('Validation Error', $validator->errors()->toArray(), 422);
-        }
-
-        $user->update($request->only('name', 'email', 'role', 'nim_nip', 'phone', 'department', 'is_active'));
-
-        if ($request->filled('password')) {
-            $user->update(['password' => Hash::make($request->password)]);
+        if (!empty($validated['password'])) {
+            $user->update(['password' => Hash::make($validated['password'])]);
         }
 
         return $this->sendSuccess($user, 'Pengguna berhasil diperbarui');

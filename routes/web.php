@@ -54,13 +54,11 @@ Route::middleware('auth')->group(function () {
         Route::get('/equipment/{equipment}', [EquipmentController::class, 'show'])->name('equipment.show');
     });
 
-    // Equipment (restricted to non-pengguna)
+    // Borrowings
     Route::get('/borrowings', [LabBorrowingController::class, 'index'])->name('borrowings.index');
     Route::get('/borrowings/schedule', [LabBorrowingController::class, 'schedule'])->name('borrowings.schedule');
     Route::get('/borrowings/create', [LabBorrowingController::class, 'create'])->name('borrowings.create');
-    Route::post('/borrowings', [LabBorrowingController::class, 'store'])->name('borrowings.store');
     Route::get('/borrowings/{borrowing}', [LabBorrowingController::class, 'show'])->name('borrowings.show');
-    Route::post('/borrowings/{borrowing}/cancel', [LabBorrowingController::class, 'cancel'])->name('borrowings.cancel');
 
     // Laboratories (read for all)
     Route::get('/laboratories', [LaboratoryController::class, 'index'])->name('laboratories.index');
@@ -82,32 +80,15 @@ Route::middleware('auth')->group(function () {
     |----------------------------------------------------------------------
     | Admin & Asisten Routes
     |----------------------------------------------------------------------
-    */
+    |*/
     Route::middleware('role:admin_lab,asisten_lab,admin,asisten')->group(function () {
-        // Equipment Management
-        Route::get('/equipment-create', [EquipmentController::class, 'create'])->name('equipment.create');
-        Route::post('/equipment', [EquipmentController::class, 'store'])->name('equipment.store');
-        Route::get('/equipment/{equipment}/edit', [EquipmentController::class, 'edit'])->name('equipment.edit');
-        Route::put('/equipment/{equipment}', [EquipmentController::class, 'update'])->name('equipment.update');
-        Route::delete('/equipment/{equipment}', [EquipmentController::class, 'destroy'])->name('equipment.destroy');
-
         // Categories
-        Route::resource('categories', EquipmentCategoryController::class)->except(['show']);
-
-        // Borrowing management (approve/reject/complete/delete)
-        Route::post('/borrowings/{borrowing}/approve', [LabBorrowingController::class, 'approve'])->name('borrowings.approve');
-        Route::post('/borrowings/{borrowing}/reject', [LabBorrowingController::class, 'reject'])->name('borrowings.reject');
-        Route::post('/borrowings/{borrowing}/complete', [LabBorrowingController::class, 'complete'])->name('borrowings.complete');
-        Route::delete('/borrowings/{borrowing}', [LabBorrowingController::class, 'destroy'])->name('borrowings.destroy');
+        Route::get('/categories', [EquipmentCategoryController::class, 'index'])->name('categories.index');
 
         // Condition monitoring CRUD
         Route::get('/conditions', [EquipmentConditionController::class, 'index'])->name('conditions.index');
         Route::get('/conditions/{condition}', [EquipmentConditionController::class, 'show'])->name('conditions.show');
         Route::get('/conditions-create', [EquipmentConditionController::class, 'create'])->name('conditions.create');
-        Route::post('/conditions', [EquipmentConditionController::class, 'store'])->name('conditions.store');
-
-        // Damage report status management
-        Route::put('/damage-reports/{damage_report}/status', [DamageReportController::class, 'updateStatus'])->name('damage-reports.update-status');
 
         // Patrol Execution (Asisten)
         Route::get('/patrol/{scheduleId}', PatrolExecution::class)->name('patrol.execute');
@@ -117,26 +98,14 @@ Route::middleware('auth')->group(function () {
     |----------------------------------------------------------------------
     | Admin Only Routes
     |----------------------------------------------------------------------
-    */
+    |*/
     Route::middleware('role:admin_lab,admin')->group(function () {
-        // Laboratories CRUD (Management)
-        Route::get('/laboratories/create', [LaboratoryController::class, 'create'])->name('laboratories.create');
-        Route::post('/laboratories', [LaboratoryController::class, 'store'])->name('laboratories.store');
-        Route::get('/laboratories/{laboratory}/edit', [LaboratoryController::class, 'edit'])->name('laboratories.edit');
-        Route::put('/laboratories/{laboratory}', [LaboratoryController::class, 'update'])->name('laboratories.update');
-        Route::delete('/laboratories/{laboratory}', [LaboratoryController::class, 'destroy'])->name('laboratories.destroy');
-
         // Buildings & Rooms CRUD
-        Route::resource('buildings', BuildingController::class);
-        Route::resource('rooms', RoomController::class);
+        Route::get('/buildings', [BuildingController::class, 'index'])->name('buildings.index');
+        Route::get('/rooms', [RoomController::class, 'index'])->name('rooms.index');
 
         // User Management
         Route::resource('users', UserController::class)->except(['show']);
-
-        // Procurement approve/reject/delete
-        Route::post('/procurements/{procurement}/approve', [ProcurementController::class, 'approve'])->name('procurements.approve');
-        Route::post('/procurements/{procurement}/reject', [ProcurementController::class, 'reject'])->name('procurements.reject');
-        Route::delete('/procurements/{procurement}', [ProcurementController::class, 'destroy'])->name('procurements.destroy');
 
         // Role & Permission Management (Livewire)
         Route::get('/roles', RoleManagement::class)->name('roles.index');

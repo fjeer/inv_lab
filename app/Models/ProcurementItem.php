@@ -9,6 +9,8 @@ class ProcurementItem extends Model
 {
     protected $fillable = [
         'procurement_id',
+        'replaces_equipment_id',
+        'replaces_equipment_item_id',
         'item_name',
         'specification',
         'quantity',
@@ -31,5 +33,15 @@ class ProcurementItem extends Model
     public function procurement(): BelongsTo
     {
         return $this->belongsTo(Procurement::class);
+    }
+
+    public function replacesEquipment(): BelongsTo
+    {
+        return $this->belongsTo(Equipment::class, 'replaces_equipment_id');
+    }
+
+    public function replacesEquipmentItem(): BelongsTo
+    {
+        return $this->belongsTo(EquipmentItem::class, 'replaces_equipment_item_id');
     }
 }

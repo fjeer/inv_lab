@@ -94,7 +94,7 @@ $(document).ready(function() {
                 className: 'px-5 py-4 text-right',
                 render: function(data) {
                     let actions = `<a href="/procurements/${data}" class="text-blue-600 hover:text-blue-700 font-medium mr-3">Detail</a>`;
-                    @if(Auth::user()->hasRole('admin_lab'))
+                    @if(Auth::user()->hasRole('admin_lab', 'admin'))
                         actions += `<button onclick="deleteProcurement(${data})" class="text-red-600 hover:text-red-700 font-medium">Hapus</button>`;
                     @endif
                     return actions;

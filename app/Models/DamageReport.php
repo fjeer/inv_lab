@@ -9,6 +9,7 @@ class DamageReport extends Model
 {
     protected $fillable = [
         'equipment_id',
+        'equipment_item_id',
         'reported_by',
         'handled_by',
         'damage_type',
@@ -35,6 +36,11 @@ class DamageReport extends Model
     public function equipment(): BelongsTo
     {
         return $this->belongsTo(Equipment::class);
+    }
+
+    public function equipmentItem(): BelongsTo
+    {
+        return $this->belongsTo(EquipmentItem::class, 'equipment_item_id');
     }
 
     public function reporter(): BelongsTo

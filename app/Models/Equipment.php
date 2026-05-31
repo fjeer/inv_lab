@@ -8,6 +8,17 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Equipment extends Model
 {
+    protected static function booted()
+    {
+        static::created(function ($equipment) {
+            $equipment->generateItems();
+        });
+
+        static::updated(function ($equipment) {
+            $equipment->generateItems();
+        });
+    }
+
     protected $table = 'equipment';
 
     protected $fillable = [

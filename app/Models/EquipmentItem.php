@@ -16,6 +16,7 @@ class EquipmentItem extends Model
         'condition_notes',
         'last_checked_at',
         'last_checked_by',
+        'replaces_equipment_item_id',
     ];
 
     protected function casts(): array
@@ -40,6 +41,11 @@ class EquipmentItem extends Model
     public function patrolLogs(): HasMany
     {
         return $this->hasMany(PatrolLog::class);
+    }
+
+    public function replacesEquipmentItem(): BelongsTo
+    {
+        return $this->belongsTo(EquipmentItem::class, 'replaces_equipment_item_id');
     }
 
     /* ---- Accessors ---- */

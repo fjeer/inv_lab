@@ -9,7 +9,7 @@ class ConditionApiController extends BaseApiController
 {
     public function index(Request $request)
     {
-        $query = EquipmentCondition::with(['equipment.laboratory', 'checker']);
+        $query = EquipmentCondition::with(['equipment.laboratory', 'equipmentItem', 'checker']);
 
         if ($request->filled('search.value')) {
             $search = $request->input('search.value');
@@ -46,6 +46,7 @@ class ConditionApiController extends BaseApiController
     {
         $validator = \Illuminate\Support\Facades\Validator::make($request->all(), [
             'equipment_id' => 'required|exists:equipment,id',
+            'equipment_item_id' => 'nullable|exists:equipment_items,id',
             'condition' => 'required|in:baik,rusak_ringan,rusak_berat,hilang',
             'check_date' => 'required|date',
             'description' => 'nullable|string',
@@ -58,7 +59,20 @@ class ConditionApiController extends BaseApiController
         }
 
         $equipment = \App\Models\Equipment::findOrFail($request->equipment_id);
-        $data = $request->only(['equipment_id', 'condition', 'check_date', 'description', 'action_taken']);
+        
+        $previousCondition = $equipment->condition;
+        $equipmentItemId = $request->input('equipment_item_id');
+        if ($equipmentItemId) {
+            $item = \App\Models\EquipmentItem::where('id', $equipmentItemId)
+                ->where('equipment_id', $equipment->id)
+                ->first();
+            if ($item) {
+                $previousCondition = $item->condition;
+                $item->update(['condition' => $request->condition]);
+            }
+        }
+
+        $data = $request->only(['equipment_id', 'equipment_item_id', 'condition', 'check_date', 'description', 'action_taken']);
         
         if ($request->hasFile('photo')) {
             $data['photo'] = $request->file('photo')->store('conditions', 'public');
@@ -66,7 +80,7 @@ class ConditionApiController extends BaseApiController
 
         $condition = EquipmentCondition::create(array_merge($data, [
             'checked_by' => $request->user()->id,
-            'previous_condition' => $equipment->condition,
+            'previous_condition' => $previousCondition,
         ]));
 
         $equipment->update(['condition' => $request->condition]);

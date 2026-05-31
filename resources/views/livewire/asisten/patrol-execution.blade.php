@@ -18,9 +18,13 @@
             </div>
             <div class="w-12 h-12 rounded-full flex items-center justify-center {{ count($scannedLogs) >= $totalItemsInLab && $totalItemsInLab > 0 ? 'bg-emerald-100 text-emerald-600' : 'bg-blue-100 text-blue-600' }}">
                 @if(count($scannedLogs) >= $totalItemsInLab && $totalItemsInLab > 0)
-                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                </svg>
                 @else
-                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"/></svg>
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
+                </svg>
                 @endif
             </div>
         </div>
@@ -29,7 +33,9 @@
     {{-- Flash messages --}}
     @if(session()->has('message'))
     <div class="p-4 bg-emerald-50 border border-emerald-200 text-emerald-700 rounded-xl text-sm flex items-center gap-2">
-        <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+        <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+        </svg>
         {{ session('message') }}
     </div>
     @endif
@@ -46,7 +52,10 @@
                 <div id="qr-reader" class="w-full max-w-sm rounded-xl overflow-hidden border-2 border-dashed border-slate-300" style="min-height:300px;"></div>
 
                 <button id="start-scan-btn" onclick="startScanner()" class="px-6 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 text-white text-sm font-semibold rounded-xl shadow-lg shadow-blue-500/25 hover:shadow-blue-500/40 transition-all">
-                    <svg class="w-5 h-5 inline-block mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+                    <svg class="w-5 h-5 inline-block mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
+                    </svg>
                     Mulai Scan
                 </button>
 
@@ -58,7 +67,9 @@
             {{-- Scan Error --}}
             @if($scanError)
             <div class="mt-4 p-4 bg-red-50 border border-red-200 text-red-700 rounded-xl text-sm flex items-center gap-2">
-                <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
                 {{ $scanError }}
             </div>
             @endif
@@ -77,10 +88,10 @@
                         <label class="block text-sm font-semibold text-slate-700 mb-2">Kondisi Barang</label>
                         <div class="grid grid-cols-2 sm:grid-cols-4 gap-2">
                             @foreach([
-                                'baik' => ['Baik', 'bg-emerald-100 text-emerald-700 border-emerald-300', 'bg-emerald-500 text-white border-emerald-500'],
-                                'rusak_ringan' => ['Rusak Ringan', 'bg-amber-100 text-amber-700 border-amber-300', 'bg-amber-500 text-white border-amber-500'],
-                                'rusak_berat' => ['Rusak Berat', 'bg-red-100 text-red-700 border-red-300', 'bg-red-500 text-white border-red-500'],
-                                'hilang' => ['Hilang', 'bg-slate-100 text-slate-700 border-slate-300', 'bg-slate-600 text-white border-slate-600'],
+                            'baik' => ['Baik', 'bg-emerald-100 text-emerald-700 border-emerald-300', 'bg-emerald-500 text-white border-emerald-500'],
+                            'rusak_ringan' => ['Rusak Ringan', 'bg-amber-100 text-amber-700 border-amber-300', 'bg-amber-500 text-white border-amber-500'],
+                            'rusak_berat' => ['Rusak Berat', 'bg-red-100 text-red-700 border-red-300', 'bg-red-500 text-white border-red-500'],
+                            'hilang' => ['Hilang', 'bg-slate-100 text-slate-700 border-slate-300', 'bg-blue-600 text-white border-blue-600'],
                             ] as $value => [$label, $inactiveClass, $activeClass])
                             <button wire:click="$set('selectedCondition', '{{ $value }}')"
                                 class="px-4 py-2.5 rounded-xl text-sm font-semibold border-2 transition-all duration-200 {{ $selectedCondition === $value ? $activeClass : $inactiveClass }}">
@@ -147,42 +158,48 @@
 @push('scripts')
 <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
 <script>
-let html5QrCode = null;
+    let html5QrCode = null;
 
-function startScanner() {
-    const qrReaderEl = document.getElementById('qr-reader');
-    if (!qrReaderEl) return;
+    function startScanner() {
+        const qrReaderEl = document.getElementById('qr-reader');
+        if (!qrReaderEl) return;
 
-    html5QrCode = new Html5Qrcode("qr-reader");
+        html5QrCode = new Html5Qrcode("qr-reader");
 
-    document.getElementById('start-scan-btn').classList.add('hidden');
-    document.getElementById('stop-scan-btn').classList.remove('hidden');
+        document.getElementById('start-scan-btn').classList.add('hidden');
+        document.getElementById('stop-scan-btn').classList.remove('hidden');
 
-    html5QrCode.start(
-        { facingMode: "environment" },
-        { fps: 10, qrbox: { width: 250, height: 250 } },
-        (decodedText) => {
-            // Stop scanning after successful read
-            stopScanner();
-            @this.call('onQrScanned', decodedText);
-        },
-        (errorMessage) => {
-            // Scanning in progress...
-        }
-    ).catch(err => {
-        console.error("Unable to start QR scanner:", err);
-        document.getElementById('start-scan-btn').classList.remove('hidden');
-        document.getElementById('stop-scan-btn').classList.add('hidden');
-    });
-}
-
-function stopScanner() {
-    if (html5QrCode && html5QrCode.isScanning) {
-        html5QrCode.stop().then(() => {
+        html5QrCode.start({
+                facingMode: "environment"
+            }, {
+                fps: 10,
+                qrbox: {
+                    width: 250,
+                    height: 250
+                }
+            },
+            (decodedText) => {
+                // Stop scanning after successful read
+                stopScanner();
+                @this.call('onQrScanned', decodedText);
+            },
+            (errorMessage) => {
+                // Scanning in progress...
+            }
+        ).catch(err => {
+            console.error("Unable to start QR scanner:", err);
             document.getElementById('start-scan-btn').classList.remove('hidden');
             document.getElementById('stop-scan-btn').classList.add('hidden');
         });
     }
-}
+
+    function stopScanner() {
+        if (html5QrCode && html5QrCode.isScanning) {
+            html5QrCode.stop().then(() => {
+                document.getElementById('start-scan-btn').classList.remove('hidden');
+                document.getElementById('stop-scan-btn').classList.add('hidden');
+            });
+        }
+    }
 </script>
 @endpush

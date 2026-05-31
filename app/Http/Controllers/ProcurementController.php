@@ -33,12 +33,13 @@ class ProcurementController extends Controller
 
     public function create()
     {
-        return view('procurements.create');
+        $equipmentList = \App\Models\Equipment::with(['laboratory', 'items'])->orderBy('name')->get();
+        return view('procurements.create', compact('equipmentList'));
     }
 
     public function show(Procurement $procurement)
     {
-        $procurement->load(['requester', 'approver', 'items']);
+        $procurement->load(['requester', 'approver', 'items.replacesEquipment', 'items.replacesEquipmentItem']);
 
         return view('procurements.show', compact('procurement'));
     }

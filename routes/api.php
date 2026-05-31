@@ -48,6 +48,7 @@ Route::middleware('auth:sanctum')->group(function () {
         // Equipment
         Route::get('/equipment', [EquipmentApiController::class, 'index']);
         Route::get('/equipment/{id}', [EquipmentApiController::class, 'show']);
+        Route::post('/equipment/scan', [EquipmentApiController::class, 'scanQr']);
         Route::post('/equipment', [EquipmentApiController::class, 'store']);
         Route::put('/equipment/{id}', [EquipmentApiController::class, 'update']);
         Route::delete('/equipment/{id}', [EquipmentApiController::class, 'destroy']);

@@ -28,12 +28,18 @@
                     <option value="">Pilih Alat</option>
                 </select>
             </div>
+            <div>
+                <label class="block text-sm font-medium text-slate-700 mb-1.5">Pilih Item / Kode Unik *</label>
+                <select name="equipment_item_id" id="equipment_item_id" required disabled class="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/30" data-old="{{ old('equipment_item_id') }}">
+                    <option value="">Pilih Item</option>
+                </select>
+            </div>
             <div><label class="block text-sm font-medium text-slate-700 mb-1.5">Tingkat Kerusakan *</label>
                 <select name="damage_type" required class="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/30">
                     @foreach(['ringan'=>'Ringan','sedang'=>'Sedang','berat'=>'Berat'] as $v=>$l)<option value="{{ $v }}" {{ old('damage_type') == $v ? 'selected' : '' }}>{{ $l }}</option>@endforeach</select></div>
             <div><label class="block text-sm font-medium text-slate-700 mb-1.5">Tanggal Kejadian *</label>
                 <input type="date" name="incident_date" value="{{ old('incident_date', date('Y-m-d')) }}" required class="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/30"></div>
-            <div class="md:col-span-2">
+            <div>
                 <label class="block text-sm font-medium text-slate-700 mb-1.5">Foto Kerusakan</label>
                 <input type="file" name="photo" accept="image/*" class="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm file:mr-4 file:py-1 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-medium file:bg-amber-50 file:text-amber-700">
             </div>
@@ -53,9 +59,12 @@
     const equipmentList = @json($equipmentList);
     const labSelect = document.getElementById('laboratory_id');
     const eqSelect = document.getElementById('equipment_id');
+    const itemSelect = document.getElementById('equipment_item_id');
 
     function updateEquipmentOptions(labId) {
         eqSelect.innerHTML = '<option value="">Pilih Alat</option>';
+        itemSelect.innerHTML = '<option value="">Pilih Item</option>';
+        itemSelect.disabled = true;
         
         if (labId) {
             const filtered = equipmentList.filter(eq => eq.laboratory_id == labId);
@@ -72,6 +81,7 @@
                 const oldEq = eqSelect.dataset.old;
                 if (oldEq) {
                     eqSelect.value = oldEq;
+                    updateItemOptions(oldEq);
                 }
             } else {
                 eqSelect.disabled = true;
@@ -81,8 +91,39 @@
         }
     }
 
+    function updateItemOptions(eqId) {
+        itemSelect.innerHTML = '<option value="">Pilih Item</option>';
+        
+        if (eqId) {
+            const equipment = equipmentList.find(eq => eq.id == eqId);
+            if (equipment && equipment.items && equipment.items.length > 0) {
+                equipment.items.forEach(item => {
+                    const option = document.createElement('option');
+                    option.value = item.id;
+                    const condStr = item.condition.toUpperCase().replace('_', ' ');
+                    option.textContent = `${item.qr_code} [Kondisi: ${condStr}]`;
+                    itemSelect.appendChild(option);
+                });
+                itemSelect.disabled = false;
+                
+                const oldItem = itemSelect.dataset.old;
+                if (oldItem) {
+                    itemSelect.value = oldItem;
+                }
+            } else {
+                itemSelect.disabled = true;
+            }
+        } else {
+            itemSelect.disabled = true;
+        }
+    }
+
     labSelect.addEventListener('change', function() {
         updateEquipmentOptions(this.value);
+    });
+
+    eqSelect.addEventListener('change', function() {
+        updateItemOptions(this.value);
     });
 
     // Initialize on load

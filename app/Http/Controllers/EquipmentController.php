@@ -47,7 +47,7 @@ class EquipmentController extends Controller
 
     public function show(Equipment $equipment)
     {
-        $equipment->load(['laboratory', 'category', 'conditions.checker', 'damageReports.reporter']);
+        $equipment->load(['laboratory', 'category', 'conditions.checker', 'damageReports.reporter', 'items.replacesEquipmentItem']);
 
         return view('equipment.show', compact('equipment'));
     }

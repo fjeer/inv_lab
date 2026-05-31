@@ -23,6 +23,7 @@
                     <th class="text-left px-5 py-3.5 font-semibold text-slate-600">Kode</th>
                     <th class="text-left px-5 py-3.5 font-semibold text-slate-600">Nama Alat</th>
                     <th class="text-left px-5 py-3.5 font-semibold text-slate-600">Laboratorium</th>
+                    <th class="text-left px-5 py-3.5 font-semibold text-slate-600">Stok</th>
                     <th class="text-left px-5 py-3.5 font-semibold text-slate-600">Kondisi</th>
                     <th class="text-left px-5 py-3.5 font-semibold text-slate-600">Status</th>
                     <th class="text-right px-5 py-3.5 font-semibold text-slate-600">Aksi</th>
@@ -123,6 +124,16 @@ $(document).ready(function() {
             { data: 'code', className: 'px-5 py-4 font-mono text-xs text-slate-500' },
             { data: 'name', className: 'px-5 py-4 font-medium text-slate-700' },
             { data: 'laboratory.name', className: 'px-5 py-4 text-slate-600' },
+            { 
+                data: null, 
+                className: 'px-5 py-4 text-center',
+                render: (data, type, row) => {
+                    const total = row.items_count || 0;
+                    const baik = row.items_baik_count || 0;
+                    const color = total === 0 ? 'bg-slate-100 text-slate-500' : (baik === total ? 'bg-emerald-50 text-emerald-700' : 'bg-amber-50 text-amber-700');
+                    return `<span class="inline-flex items-center gap-1 px-2 py-0.5 text-xs font-semibold rounded-lg ${color}">${baik} Baik <span class="text-slate-400 font-normal">/ ${total}</span></span>`;
+                }
+            },
             { 
                 data: 'condition', 
                 render: (data) => `<span class="text-xs px-2.5 py-1 rounded-full font-medium ${data === 'baik' ? 'bg-emerald-50 text-emerald-700' : 'bg-amber-50 text-amber-700'}">${data.replace('_', ' ')}</span>`
