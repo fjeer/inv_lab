@@ -53,7 +53,7 @@ class LaboratoryApiController extends BaseApiController
 
     public function show($id)
     {
-        $lab = Laboratory::with(['room.building', 'equipment.category', 'schedules.user', 'responsiblePerson'])->find($id);
+        $lab = Laboratory::with(['room.building', 'equipment.category', 'patrolSchedules.user', 'responsiblePerson'])->find($id);
 
         if (!$lab) {
             return $this->sendError('Laboratorium tidak ditemukan');
