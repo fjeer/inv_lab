@@ -2,8 +2,11 @@
 
 namespace App\Http\Controllers\Api;
 
+use App\Models\Equipment;
+use App\Models\EquipmentItem;
 use App\Models\Procurement;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
 
 class ProcurementApiController extends BaseApiController
@@ -11,13 +14,12 @@ class ProcurementApiController extends BaseApiController
     public function index(Request $request)
     {
         $query = Procurement::with(['requester', 'items.replacesEquipment', 'items.replacesEquipmentItem']);
+        $this->applyTrashedFilter($query, $request);
 
-        // Non-admin can only see their own
         if ($request->user() && $request->user()->role !== 'admin_lab') {
             $query->where('requested_by', $request->user()->id);
         }
 
-        // DataTables search
         if ($request->filled('search.value')) {
             $search = $request->input('search.value');
             $query->where(function ($q) use ($search) {
@@ -37,10 +39,9 @@ class ProcurementApiController extends BaseApiController
             $query->where('priority', $request->priority);
         }
 
-        // DataTables pagination: start (offset) and length (limit)
-        $limit = $request->input('length', 10);
+        $limit = max($request->input('length', 10), 1);
         $start = $request->input('start', 0);
-        $page = ($start / $limit) + 1;
+        $page = (int) ($start / $limit) + 1;
 
         $procurements = $query->orderByDesc('id')->paginate($limit, ['*'], 'page', $page);
 
@@ -49,13 +50,14 @@ class ProcurementApiController extends BaseApiController
 
     public function show($id)
     {
-        $procurement = Procurement::with(['requester', 'items.replacesEquipment', 'items.replacesEquipmentItem', 'approver'])->find($id);
+        $procurement = Procurement::withTrashed()
+            ->with(['requester', 'items.replacesEquipment', 'items.replacesEquipmentItem', 'approver'])
+            ->find($id);
 
-        if (!$procurement) {
+        if (! $procurement) {
             return $this->sendError('Pengadaan tidak ditemukan');
         }
 
-        // Check ownership for non-admin
         if (request()->user()->role !== 'admin_lab' && $procurement->requested_by !== request()->user()->id) {
             return $this->sendError('Unauthorized', [], 403);
         }
@@ -97,15 +99,17 @@ class ProcurementApiController extends BaseApiController
         ]);
 
         foreach ($items as $item) {
-            $replacesEqItemId = $item['replaces_equipment_item_id'] ?? null;
-            $replacesEqId = null;
-            if ($replacesEqItemId) {
-                $replacesEqId = \App\Models\EquipmentItem::find($replacesEqItemId)?->equipment_id;
+            $replacesEquipmentItemId = $item['replaces_equipment_item_id'] ?? null;
+            $replacesEquipmentId = null;
+
+            if ($replacesEquipmentItemId) {
+                $replacesEquipmentId = EquipmentItem::find($replacesEquipmentItemId)?->equipment_id;
             }
+
             $procurement->items()->create([
                 'item_name' => $item['item_name'],
-                'replaces_equipment_id' => $replacesEqId,
-                'replaces_equipment_item_id' => $replacesEqItemId,
+                'replaces_equipment_id' => $replacesEquipmentId,
+                'replaces_equipment_item_id' => $replacesEquipmentItemId,
                 'specification' => $item['specification'] ?? null,
                 'quantity' => $item['quantity'],
                 'unit' => $item['unit'],
@@ -120,45 +124,74 @@ class ProcurementApiController extends BaseApiController
     public function approve(Request $request, $id)
     {
         $procurement = Procurement::with('items')->find($id);
-        if (!$procurement) {
+        if (! $procurement) {
             return $this->sendError('Pengadaan tidak ditemukan');
         }
 
-        $procurement->update([
-            'status' => 'approved',
-            'approved_by' => $request->user()->id,
-            'approved_at' => now()
-        ]);
+        DB::transaction(function () use ($procurement, $request) {
+            $procurement->update([
+                'status' => 'approved',
+                'approved_by' => $request->user()->id,
+                'approved_at' => now(),
+            ]);
 
-        // Process replacements and inventory injection
-        foreach ($procurement->items as $procurementItem) {
-            if ($procurementItem->replaces_equipment_item_id) {
-                // Find target equipment item that is being replaced
-                $oldItem = \App\Models\EquipmentItem::find($procurementItem->replaces_equipment_item_id);
-                if ($oldItem) {
-                    $equipment = $oldItem->equipment;
-                    if ($equipment) {
-                        // Increase the equipment quantity by the amount ordered
-                        $newQuantity = $equipment->quantity + $procurementItem->quantity;
-                        $equipment->update(['quantity' => $newQuantity]);
-                        
-                        // Link the newly created item to the old replaced item
-                        // In generateItems(), new items are created. We look for the newly created items and link them.
-                        $newItems = \App\Models\EquipmentItem::where('equipment_id', $equipment->id)
-                            ->whereNull('replaces_equipment_item_id')
-                            ->orderBy('id', 'desc')
-                            ->take($procurementItem->quantity)
-                            ->get();
+            foreach ($procurement->items as $procurementItem) {
+                if (! $procurementItem->replaces_equipment_item_id) {
+                    continue;
+                }
 
-                        foreach ($newItems as $newItem) {
-                            $newItem->update([
-                                'replaces_equipment_item_id' => $oldItem->id
-                            ]);
-                        }
-                    }
+                $oldItem = EquipmentItem::find($procurementItem->replaces_equipment_item_id);
+                if (! $oldItem) {
+                    continue;
+                }
+
+                $oldEquipment = $oldItem->equipment;
+                $oldItem->update(['condition' => 'rusak_berat']);
+
+                $targetEquipment = Equipment::where('name', $procurementItem->item_name)->first();
+
+                if (! $targetEquipment) {
+                    $targetEquipment = Equipment::create([
+                        'laboratory_id' => $oldEquipment?->laboratory_id,
+                        'category_id' => $oldEquipment?->category_id,
+                        'name' => $procurementItem->item_name,
+                        'code' => Equipment::max('id') + 1 . '-' . str_replace(' ', '_', $procurementItem->item_name),
+                        'quantity' => 0,
+                        'condition' => 'baik',
+                        'status' => 'available',
+                    ]);
+                }
+
+                if ($procurementItem->replaces_equipment_id != $targetEquipment->id) {
+                    $procurementItem->update(['replaces_equipment_id' => $targetEquipment->id]);
+                }
+
+                $lastSequence = (int) $targetEquipment->items()->withTrashed()->max('sequence_number');
+
+                for ($i = 1; $i <= $procurementItem->quantity; $i++) {
+                    $sequenceNumber = $lastSequence + $i;
+
+                    $targetEquipment->items()->create([
+                        'sequence_number' => $sequenceNumber,
+                        'qr_code' => EquipmentItem::generateQrCode($targetEquipment, $sequenceNumber),
+                        'condition' => 'baik',
+                        'replaces_equipment_item_id' => $oldItem->id,
+                    ]);
+                }
+
+                $targetEquipment->updateQuietly([
+                    'quantity' => $targetEquipment->items()->count(),
+                ]);
+                $targetEquipment->syncConditionFromItems();
+
+                if ($oldEquipment && $oldEquipment->isNot($targetEquipment)) {
+                    $oldEquipment->updateQuietly([
+                        'quantity' => $oldEquipment->items()->count(),
+                    ]);
+                    $oldEquipment->syncConditionFromItems();
                 }
             }
-        }
+        });
 
         return $this->sendSuccess($procurement, 'Pengadaan berhasil disetujui');
     }
@@ -166,7 +199,7 @@ class ProcurementApiController extends BaseApiController
     public function reject(Request $request, $id)
     {
         $procurement = Procurement::find($id);
-        if (!$procurement) {
+        if (! $procurement) {
             return $this->sendError('Pengadaan tidak ditemukan');
         }
 
@@ -181,7 +214,7 @@ class ProcurementApiController extends BaseApiController
         $procurement->update([
             'status' => 'rejected',
             'approved_by' => $request->user()->id,
-            'rejection_reason' => $request->rejection_reason
+            'rejection_reason' => $request->rejection_reason,
         ]);
 
         return $this->sendSuccess($procurement, 'Pengadaan berhasil ditolak');
@@ -190,7 +223,7 @@ class ProcurementApiController extends BaseApiController
     public function destroy($id)
     {
         $procurement = Procurement::find($id);
-        if (!$procurement) {
+        if (! $procurement) {
             return $this->sendError('Pengadaan tidak ditemukan');
         }
 

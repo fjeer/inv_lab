@@ -11,6 +11,7 @@ class RoomApiController extends BaseApiController
     public function index(Request $request)
     {
         $query = Room::with('building');
+        $this->applyTrashedFilter($query, $request);
 
         if ($request->filled('building_id')) {
             $query->where('building_id', $request->building_id);
@@ -34,7 +35,7 @@ class RoomApiController extends BaseApiController
         if ($request->has('length')) {
             $limit = $request->input('length', 10);
             $start = $request->input('start', 0);
-            $page = ($start / $limit) + 1;
+            $limit = max($limit, 1); $page = (int)($start / $limit) + 1;
             $rooms = $query->orderBy('name')->paginate($limit, ['*'], 'page', $page);
             return $this->sendPaginated($rooms, 'Data ruangan berhasil dimuat');
         }
@@ -46,7 +47,7 @@ class RoomApiController extends BaseApiController
 
     public function show($id)
     {
-        $room = Room::with(['building', 'laboratories'])->find($id);
+        $room = Room::withTrashed()->with(['building', 'laboratories'])->find($id);
 
         if (!$room) {
             return $this->sendError('Ruangan tidak ditemukan');

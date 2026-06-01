@@ -30,16 +30,6 @@
         </div>
     </div>
 
-    {{-- Flash messages --}}
-    @if(session()->has('message'))
-    <div class="p-4 bg-emerald-50 border border-emerald-200 text-emerald-700 rounded-xl text-sm flex items-center gap-2">
-        <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-        </svg>
-        {{ session('message') }}
-    </div>
-    @endif
-
     {{-- Scanner Section --}}
     <div class="bg-white rounded-2xl border border-slate-200/60 shadow-sm overflow-hidden">
         <div class="p-5 border-b border-slate-100">

@@ -11,6 +11,7 @@ class BuildingApiController extends BaseApiController
     public function index(Request $request)
     {
         $query = Building::query();
+        $this->applyTrashedFilter($query, $request);
 
         // DataTables search
         $search = null;
@@ -34,7 +35,7 @@ class BuildingApiController extends BaseApiController
         if ($request->has('length')) {
             $limit = $request->input('length', 10);
             $start = $request->input('start', 0);
-            $page = ($start / $limit) + 1;
+            $limit = max($limit, 1); $page = (int)($start / $limit) + 1;
             $buildings = $query->orderBy('name')->paginate($limit, ['*'], 'page', $page);
             return $this->sendPaginated($buildings, 'Data gedung berhasil dimuat');
         }
@@ -45,7 +46,7 @@ class BuildingApiController extends BaseApiController
 
     public function show($id)
     {
-        $building = Building::with('rooms')->find($id);
+        $building = Building::withTrashed()->with('rooms')->find($id);
 
         if (!$building) {
             return $this->sendError('Gedung tidak ditemukan');

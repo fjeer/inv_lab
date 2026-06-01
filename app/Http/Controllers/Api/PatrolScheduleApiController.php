@@ -15,6 +15,7 @@ class PatrolScheduleApiController extends BaseApiController
     public function index(Request $request)
     {
         $query = PatrolSchedule::with(['user', 'laboratory']);
+        $this->applyTrashedFilter($query, $request);
 
         // DataTables search
         if ($request->filled('search.value')) {
@@ -43,7 +44,7 @@ class PatrolScheduleApiController extends BaseApiController
         // DataTables pagination: start (offset) and length (limit)
         $limit = $request->input('length', 10);
         $start = $request->input('start', 0);
-        $page = ($start / $limit) + 1;
+        $limit = max($limit, 1); $page = (int)($start / $limit) + 1;
 
         $schedules = $query->orderByRaw("FIELD(day_of_week, 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday')")
             ->orderBy('start_time')
@@ -57,7 +58,7 @@ class PatrolScheduleApiController extends BaseApiController
      */
     public function show($id)
     {
-        $schedule = PatrolSchedule::with(['user', 'laboratory'])->find($id);
+        $schedule = PatrolSchedule::withTrashed()->with(['user', 'laboratory'])->find($id);
 
         if (!$schedule) {
             return $this->sendError('Jadwal patroli tidak ditemukan');

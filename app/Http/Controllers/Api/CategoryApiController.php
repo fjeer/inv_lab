@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Models\EquipmentCategory;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Str;
 
 class CategoryApiController extends BaseApiController
@@ -11,6 +12,7 @@ class CategoryApiController extends BaseApiController
     public function index(Request $request)
     {
         $query = EquipmentCategory::query();
+        $this->applyTrashedFilter($query, $request);
 
         // DataTables search
         if ($request->filled('search.value')) {
@@ -24,7 +26,7 @@ class CategoryApiController extends BaseApiController
         if ($request->has('length')) {
             $limit = $request->input('length', 10);
             $start = $request->input('start', 0);
-            $page = ($start / $limit) + 1;
+            $limit = max($limit, 1); $page = (int)($start / $limit) + 1;
             $cats = $query->orderBy('name')->paginate($limit, ['*'], 'page', $page);
             return $this->sendPaginated($cats, 'Data dikumpulkan');
         }
@@ -34,12 +36,21 @@ class CategoryApiController extends BaseApiController
 
     public function show($id)
     {
-        $cat = EquipmentCategory::find($id);
+        $cat = EquipmentCategory::withTrashed()->find($id);
         return $cat ? $this->sendSuccess($cat, 'Detail ditemukan') : $this->sendError('Not found');
     }
 
     public function store(Request $request)
     {
+        $validator = Validator::make($request->all(), [
+            'name' => 'required|string|max:255|unique:equipment_categories,name',
+            'description' => 'nullable|string',
+        ]);
+
+        if ($validator->fails()) {
+            return $this->sendError('Validation Error', $validator->errors()->toArray(), 422);
+        }
+
         $cat = EquipmentCategory::create([
             'name' => $request->name,
             'slug' => Str::slug($request->name),
@@ -51,6 +62,19 @@ class CategoryApiController extends BaseApiController
     public function update(Request $request, $id)
     {
         $cat = EquipmentCategory::find($id);
+        if (!$cat) {
+            return $this->sendError('Kategori tidak ditemukan');
+        }
+
+        $validator = Validator::make($request->all(), [
+            'name' => 'required|string|max:255|unique:equipment_categories,name,' . $id,
+            'description' => 'nullable|string',
+        ]);
+
+        if ($validator->fails()) {
+            return $this->sendError('Validation Error', $validator->errors()->toArray(), 422);
+        }
+
         $cat->update([
             'name' => $request->name,
             'slug' => Str::slug($request->name),
@@ -61,7 +85,16 @@ class CategoryApiController extends BaseApiController
 
     public function destroy($id)
     {
-        EquipmentCategory::destroy($id);
+        $cat = EquipmentCategory::find($id);
+        if (!$cat) {
+            return $this->sendError('Kategori tidak ditemukan');
+        }
+
+        if ($cat->equipment()->exists()) {
+            return $this->sendError('Kategori tidak dapat dihapus karena masih memiliki alat terdaftar');
+        }
+
+        $cat->delete();
         return $this->sendSuccess(null, 'Kategori dihapus');
     }
 }

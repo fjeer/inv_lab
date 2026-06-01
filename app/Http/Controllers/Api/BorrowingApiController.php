@@ -12,6 +12,7 @@ class BorrowingApiController extends BaseApiController
     public function index(Request $request)
     {
         $query = LabBorrowing::with(['user', 'laboratory']);
+        $this->applyTrashedFilter($query, $request);
 
         // DataTables search
         if ($request->filled('search.value')) {
@@ -44,7 +45,7 @@ class BorrowingApiController extends BaseApiController
         // DataTables pagination: start (offset) and length (limit)
         $limit = $request->input('length', 10);
         $start = $request->input('start', 0);
-        $page = ($start / $limit) + 1;
+        $limit = max($limit, 1); $page = (int)($start / $limit) + 1;
 
         $borrowings = $query->orderByDesc('id')->paginate($limit, ['*'], 'page', $page);
 
@@ -53,7 +54,7 @@ class BorrowingApiController extends BaseApiController
 
     public function show($id)
     {
-        $borrowing = LabBorrowing::with(['user', 'laboratory', 'items.equipment', 'approver'])->find($id);
+        $borrowing = LabBorrowing::withTrashed()->with(['user', 'laboratory', 'approver'])->find($id);
         return $borrowing ? $this->sendSuccess($borrowing, 'Detail ditemukan') : $this->sendError('Not found');
     }
 

@@ -19,6 +19,7 @@ class EquipmentApiController extends BaseApiController
                 'items',
                 'items as items_baik_count' => fn ($q) => $q->where('condition', 'baik'),
             ]);
+        $this->applyTrashedFilter($query, $request);
 
         // DataTables search
         if ($request->filled('search.value')) {
@@ -40,7 +41,7 @@ class EquipmentApiController extends BaseApiController
         // DataTables pagination: start (offset) and length (limit)
         $limit = $request->input('length', 10);
         $start = $request->input('start', 0);
-        $page = ($start / $limit) + 1;
+        $limit = max($limit, 1); $page = (int)($start / $limit) + 1;
 
         $equipment = $query->orderBy('name')->paginate($limit, ['*'], 'page', $page);
 
@@ -53,7 +54,7 @@ class EquipmentApiController extends BaseApiController
      */
     public function show($id)
     {
-        $equipment = Equipment::with(['laboratory', 'category', 'conditions.checker'])->find($id);
+        $equipment = Equipment::withTrashed()->with(['laboratory', 'category', 'conditions.checker'])->find($id);
 
         if (!$equipment) {
             return $this->sendError('Alat tidak ditemukan');

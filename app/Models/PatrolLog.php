@@ -4,9 +4,11 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\SoftDeletes;
 
 class PatrolLog extends Model
 {
+    use SoftDeletes;
     protected $fillable = [
         'patrol_schedule_id',
         'equipment_item_id',

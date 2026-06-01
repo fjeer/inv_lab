@@ -39,9 +39,19 @@
 
         {{-- Physical Items List --}}
         <div class="bg-white rounded-2xl border border-slate-100 shadow-sm">
-            <div class="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
-                <h2 class="font-semibold text-slate-700">Daftar Item Fisik (Stok)</h2>
-                <span class="text-xs bg-slate-100 text-slate-600 px-2.5 py-1 rounded-full font-medium">{{ $equipment->items->count() }} Total</span>
+            <div class="px-6 py-4 border-b border-slate-100 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <div class="flex items-center gap-3">
+                    <h2 class="font-semibold text-slate-700">Daftar Item Fisik (Stok)</h2>
+                    <span class="text-xs bg-slate-100 text-slate-600 px-2.5 py-1 rounded-full font-medium">{{ $equipment->items->count() }} Total</span>
+                </div>
+                <form method="GET" action="{{ route('equipment.show', $equipment) }}" class="flex items-center gap-2">
+                    <label for="item_status" class="text-xs font-semibold text-slate-500">Tampilkan</label>
+                    <select id="item_status" name="item_status" onchange="this.form.submit()" class="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-600">
+                        <option value="active" @selected(request('item_status', 'active') === 'active')>Aktif</option>
+                        <option value="with" @selected(request('item_status') === 'with')>Semua</option>
+                        <option value="only" @selected(request('item_status') === 'only')>Terhapus</option>
+                    </select>
+                </form>
             </div>
             <div class="p-6 overflow-x-auto">
                 <table class="w-full text-sm">
@@ -51,13 +61,19 @@
                             <th class="text-left px-4 py-2 font-semibold text-slate-600">QR Code / Kode Unik</th>
                             <th class="text-center px-4 py-2 font-semibold text-slate-600">Kondisi</th>
                             <th class="text-left px-4 py-2 font-semibold text-slate-600">Histori Penggantian</th>
+                            <th class="text-right px-4 py-2 font-semibold text-slate-600">Aksi</th>
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-slate-50">
                         @forelse($equipment->items as $item)
-                        <tr>
+                        <tr class="{{ $item->trashed() ? 'bg-red-50/40' : '' }}">
                             <td class="px-4 py-3 font-medium text-slate-700">#{{ $item->sequence_number }}</td>
-                            <td class="px-4 py-3 font-mono text-xs text-slate-600">{{ $item->qr_code }}</td>
+                            <td class="px-4 py-3">
+                                <div class="font-mono text-xs text-slate-600">{{ $item->qr_code }}</div>
+                                @if($item->trashed())
+                                    <div class="mt-1 text-[10px] font-semibold uppercase tracking-wide text-red-600">Soft deleted</div>
+                                @endif
+                            </td>
                             <td class="px-4 py-3 text-center">
                                 <span class="text-xs px-2.5 py-0.5 rounded-full font-medium 
                                     {{ $item->condition === 'baik' ? 'bg-emerald-50 text-emerald-700' : '' }}
@@ -76,10 +92,31 @@
                                     <span class="text-slate-400">-</span>
                                 @endif
                             </td>
+                            <td class="px-4 py-3 text-right">
+                                @if($item->trashed())
+                                    <div class="flex justify-end gap-2">
+                                        <form method="POST" action="{{ route('equipment-items.restore', [$equipment, $item->id]) }}">
+                                            @csrf
+                                            <button type="submit" class="text-xs font-semibold text-emerald-700 hover:text-emerald-800">Restore</button>
+                                        </form>
+                                        <form method="POST" action="{{ route('equipment-items.force-destroy', [$equipment, $item->id]) }}" data-confirm-title="Hapus Permanen Item?" data-confirm-text="Data tidak bisa direstore setelah dihapus permanen." data-confirm-button="Ya, Hapus Permanen">
+                                            @csrf
+                                            @method('DELETE')
+                                            <button type="submit" class="text-xs font-semibold text-red-600 hover:text-red-700">Hapus Permanen</button>
+                                        </form>
+                                    </div>
+                                @else
+                                    <form method="POST" action="{{ route('equipment-items.destroy', [$equipment, $item]) }}" data-confirm-title="Hapus Item?" data-confirm-text="Item akan dipindahkan ke data terhapus dan masih bisa direstore." data-confirm-button="Ya, Hapus">
+                                        @csrf
+                                        @method('DELETE')
+                                        <button type="submit" class="text-xs font-semibold text-red-600 hover:text-red-700">Hapus</button>
+                                    </form>
+                                @endif
+                            </td>
                         </tr>
                         @empty
                         <tr>
-                            <td colspan="4" class="text-center text-slate-400 py-4">Belum ada item fisik terdaftar</td>
+                            <td colspan="5" class="text-center text-slate-400 py-4">Belum ada item fisik terdaftar</td>
                         </tr>
                         @endforelse
                     </tbody>
@@ -136,3 +173,29 @@
     </div>
 </div>
 @endsection
+
+@push('scripts')
+<script>
+$(document).ready(function() {
+    $('form[data-confirm-title]').on('submit', function(e) {
+        e.preventDefault();
+
+        const form = this;
+        Swal.fire({
+            title: form.dataset.confirmTitle,
+            text: form.dataset.confirmText,
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#dc2626',
+            cancelButtonColor: '#64748b',
+            confirmButtonText: form.dataset.confirmButton,
+            cancelButtonText: 'Batal'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                form.submit();
+            }
+        });
+    });
+});
+</script>
+@endpush

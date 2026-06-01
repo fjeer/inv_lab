@@ -11,6 +11,7 @@ class LaboratoryApiController extends BaseApiController
     public function index(Request $request)
     {
         $query = Laboratory::with(['room.building', 'responsiblePerson']);
+        $this->applyTrashedFilter($query, $request);
 
         if ($request->filled('status')) {
             $query->where('status', $request->status);
@@ -41,7 +42,7 @@ class LaboratoryApiController extends BaseApiController
         if ($request->has('length')) {
             $limit = $request->input('length', 10);
             $start = $request->input('start', 0);
-            $page = ($start / $limit) + 1;
+            $limit = max($limit, 1); $page = (int)($start / $limit) + 1;
             $labs = $query->orderBy('name')->paginate($limit, ['*'], 'page', $page);
             return $this->sendPaginated($labs, 'Data laboratorium berhasil dimuat');
         }
@@ -53,7 +54,7 @@ class LaboratoryApiController extends BaseApiController
 
     public function show($id)
     {
-        $lab = Laboratory::with(['room.building', 'equipment.category', 'patrolSchedules.user', 'responsiblePerson'])->find($id);
+        $lab = Laboratory::withTrashed()->with(['room.building', 'equipment.category', 'patrolSchedules.user', 'responsiblePerson'])->find($id);
 
         if (!$lab) {
             return $this->sendError('Laboratorium tidak ditemukan');

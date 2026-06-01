@@ -153,7 +153,7 @@ class PatrolExecution extends Component
 
         $this->loadTodaysLogs();
 
-        session()->flash('message', 'Kondisi alat berhasil diperbarui.');
+        $this->dispatch('swal', title: 'Berhasil!', text: 'Kondisi alat berhasil diperbarui.', icon: 'success');
     }
 
     public function cancelScan(): void

@@ -5,7 +5,6 @@ namespace App\Http\Controllers;
 use App\Models\Equipment;
 use App\Models\EquipmentCategory;
 use App\Models\Laboratory;
-use App\Models\ActivityLog;
 use Illuminate\Http\Request;
 
 class EquipmentController extends Controller
@@ -13,6 +12,12 @@ class EquipmentController extends Controller
     public function index(Request $request)
     {
         $query = Equipment::with(['laboratory', 'category']);
+
+        match ($request->input('trash_status')) {
+            'with' => $query->withTrashed(),
+            'only' => $query->onlyTrashed(),
+            default => null,
+        };
 
         if ($request->filled('search')) {
             $query->where(function ($q) use ($request) {
@@ -45,9 +50,25 @@ class EquipmentController extends Controller
         return view('equipment.index', compact('equipment', 'laboratories', 'categories'));
     }
 
-    public function show(Equipment $equipment)
+    public function show(Request $request, Equipment $equipment)
     {
-        $equipment->load(['laboratory', 'category', 'conditions.checker', 'damageReports.reporter', 'items.replacesEquipmentItem']);
+        $itemStatus = $request->input('item_status', 'active');
+
+        $equipment->load([
+            'laboratory',
+            'category',
+            'conditions.checker',
+            'damageReports.reporter',
+            'items' => function ($query) use ($itemStatus) {
+                match ($itemStatus) {
+                    'with' => $query->withTrashed(),
+                    'only' => $query->onlyTrashed(),
+                    default => null,
+                };
+
+                $query->with('replacesEquipmentItem')->orderBy('sequence_number');
+            },
+        ]);
 
         return view('equipment.show', compact('equipment'));
     }

@@ -4,9 +4,11 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\SoftDeletes;
 
 class ProcurementItem extends Model
 {
+    use SoftDeletes;
     protected $fillable = [
         'procurement_id',
         'replaces_equipment_id',
@@ -37,11 +39,11 @@ class ProcurementItem extends Model
 
     public function replacesEquipment(): BelongsTo
     {
-        return $this->belongsTo(Equipment::class, 'replaces_equipment_id');
+        return $this->belongsTo(Equipment::class, 'replaces_equipment_id')->withTrashed();
     }
 
     public function replacesEquipmentItem(): BelongsTo
     {
-        return $this->belongsTo(EquipmentItem::class, 'replaces_equipment_item_id');
+        return $this->belongsTo(EquipmentItem::class, 'replaces_equipment_item_id')->withTrashed();
     }
 }

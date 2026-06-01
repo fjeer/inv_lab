@@ -4,7 +4,20 @@
 @section('content')
 <div class="mb-6">
     <a href="{{ route('damage-reports.index') }}" class="text-sm text-blue-600 hover:text-blue-700 font-medium">← Kembali</a>
-    <h1 class="text-2xl font-bold text-slate-800 mt-2">Laporan Kerusakan #{{ $damageReport->id }}</h1>
+    <div class="mt-2 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <h1 class="text-2xl font-bold text-slate-800">Laporan Kerusakan #{{ $damageReport->id }}</h1>
+        @if(Auth::user()->hasRole('admin_lab', 'admin'))
+            @if(! $damageReport->trashed())
+            <button type="button" id="delete-report-button" class="inline-flex items-center justify-center rounded-xl bg-red-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-red-700">
+                Hapus Laporan
+            </button>
+            @else
+            <button type="button" id="force-delete-report-button" class="inline-flex items-center justify-center rounded-xl bg-red-700 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-red-800">
+                Hapus Permanen
+            </button>
+            @endif
+        @endif
+    </div>
 </div>
 
 <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -57,7 +70,7 @@
     </div>
 
     {{-- Status Management --}}
-    @if(Auth::user()->hasRole('admin_lab', 'asisten_lab') && !in_array($damageReport->status, ['closed', 'repaired', 'unrepairable']))
+    @if(Auth::user()->hasRole('admin_lab', 'asisten_lab', 'admin', 'asisten') && !in_array($damageReport->status, ['closed', 'repaired', 'unrepairable']))
     <div>
         <div class="bg-white rounded-2xl border border-slate-100 shadow-sm p-5">
             <h3 class="font-semibold text-slate-700 text-sm mb-3">Perbarui Status</h3>
@@ -68,6 +81,13 @@
                         @foreach(['in_review'=>'Ditinjau','in_repair'=>'Diperbaiki','repaired'=>'Selesai Perbaikan','unrepairable'=>'Tidak Bisa Diperbaiki','closed'=>'Ditutup'] as $v=>$l)
                         <option value="{{ $v }}" {{ $damageReport->status == $v ? 'selected' : '' }}>{{ $l }}</option>@endforeach
                     </select></div>
+                <div><label class="block text-xs font-medium text-slate-600 mb-1">Update Kondisi Barang</label>
+                    <select name="item_condition" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/30">
+                        <option value="">Ikuti status laporan</option>
+                        @foreach(['baik'=>'Baik','rusak_ringan'=>'Rusak Ringan','rusak_berat'=>'Rusak Berat','hilang'=>'Hilang'] as $v=>$l)
+                        <option value="{{ $v }}">{{ $l }}</option>@endforeach
+                    </select>
+                    <p class="mt-1 text-[11px] text-slate-400">Akan mengubah kondisi item fisik dan membuat riwayat di Kondisi Barang.</p></div>
                 <div><label class="block text-xs font-medium text-slate-600 mb-1">Biaya Perbaikan (Rp)</label>
                     <input type="number" name="repair_cost" value="{{ $damageReport->repair_cost }}" min="0" step="1000" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/30"></div>
                 <div><label class="block text-xs font-medium text-slate-600 mb-1">Catatan Perbaikan</label>
@@ -82,6 +102,68 @@
 @push('scripts')
 <script>
 $(document).ready(function() {
+    $('#delete-report-button').on('click', function() {
+        Swal.fire({
+            title: 'Hapus Laporan Kerusakan?',
+            text: 'Laporan akan dipindahkan ke Data Terhapus dan histori alat tetap tersimpan.',
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#dc2626',
+            cancelButtonColor: '#64748b',
+            confirmButtonText: 'Ya, Hapus',
+            cancelButtonText: 'Batal'
+        }).then((result) => {
+            if (!result.isConfirmed) {
+                return;
+            }
+
+            $.ajax({
+                url: '/api/damage-reports/{{ $damageReport->id }}',
+                type: 'DELETE',
+                success: function(res) {
+                    window.showAlert('Berhasil!', res.message, 'success');
+                    setTimeout(() => {
+                        window.location.href = '{{ route('damage-reports.index') }}';
+                    }, 1000);
+                },
+                error: function(err) {
+                    Swal.fire('Error', err.responseJSON?.message || 'Gagal menghapus laporan kerusakan.', 'error');
+                }
+            });
+        });
+    });
+
+    $('#force-delete-report-button').on('click', function() {
+        Swal.fire({
+            title: 'Hapus Permanen?',
+            text: 'Laporan kerusakan akan dihapus permanen dan tidak bisa direstore.',
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#b91c1c',
+            cancelButtonColor: '#64748b',
+            confirmButtonText: 'Ya, Hapus Permanen',
+            cancelButtonText: 'Batal'
+        }).then((result) => {
+            if (!result.isConfirmed) {
+                return;
+            }
+
+            $.ajax({
+                url: '/api/damage-reports/{{ $damageReport->id }}/force',
+                type: 'DELETE',
+                success: function(res) {
+                    window.showAlert('Berhasil!', res.message, 'success');
+                    setTimeout(() => {
+                        window.location.href = '{{ route('damage-reports.index') }}';
+                    }, 1000);
+                },
+                error: function(err) {
+                    Swal.fire('Error', err.responseJSON?.message || 'Gagal menghapus permanen laporan kerusakan.', 'error');
+                }
+            });
+        });
+    });
+
     $('#update-status-form').on('submit', function(e) {
         e.preventDefault();
         $.ajax({

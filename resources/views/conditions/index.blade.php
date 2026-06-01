@@ -38,6 +38,11 @@
             @foreach(['baik'=>'Baik','rusak_ringan'=>'Rusak Ringan','rusak_berat'=>'Rusak Berat','hilang'=>'Hilang'] as $v=>$l)
             <option value="{{ $v }}">{{ $l }}</option>@endforeach
         </select>
+        <select id="filter-trash" class="px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/30">
+            <option value="">Data Aktif</option>
+            <option value="with">Semua Data</option>
+            <option value="only">Data Terhapus</option>
+        </select>
         <button type="button" id="btn-filter" class="px-4 py-2 bg-slate-800 text-white text-sm font-medium rounded-xl hover:bg-slate-700 transition-colors">Filter</button>
     </div>
 </div>
@@ -150,6 +155,7 @@ $(document).ready(function() {
                 d.laboratory_id = $('#filter-lab').val();
                 d.equipment_id = $('#filter-equipment').val();
                 d.condition = $('#filter-condition').val();
+                d.trash_status = $('#filter-trash').val();
             },
             dataSrc: (json) => {
                 json.recordsTotal = json.meta.total;

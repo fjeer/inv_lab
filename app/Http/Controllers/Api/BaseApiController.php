@@ -4,9 +4,19 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 
 class BaseApiController extends Controller
 {
+    protected function applyTrashedFilter($query, Request $request): void
+    {
+        match ($request->input('trash_status')) {
+            'with' => $query->withTrashed(),
+            'only' => $query->onlyTrashed(),
+            default => null,
+        };
+    }
+
     /**
      * Send success response.
      */

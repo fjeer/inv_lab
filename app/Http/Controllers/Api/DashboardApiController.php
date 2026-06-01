@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Models\Equipment;
+use App\Models\EquipmentItem;
 use App\Models\LabBorrowing;
 use App\Models\Laboratory;
 use App\Models\Procurement;
@@ -17,9 +18,10 @@ class DashboardApiController extends BaseApiController
         $user = $request->user();
         $stats = [
             'total_equipment' => Equipment::count(),
+            'total_stok' => EquipmentItem::count(),
             'total_laboratories' => Laboratory::count(),
             'active_borrowings' => LabBorrowing::whereIn('status', ['pending', 'approved'])->count(),
-            'pending_procurements' => Procurement::where('status', 'pending')->count(),
+            'pending_procurements' => Procurement::where('status', 'submitted')->count(),
             'equipment_baik' => Equipment::where('condition', 'baik')->count(),
             'equipment_rusak' => Equipment::whereIn('condition', ['rusak_ringan', 'rusak_berat'])->count(),
             'total_users' => \App\Models\User::count(),

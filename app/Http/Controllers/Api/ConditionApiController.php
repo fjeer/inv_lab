@@ -10,6 +10,7 @@ class ConditionApiController extends BaseApiController
     public function index(Request $request)
     {
         $query = EquipmentCondition::with(['equipment.laboratory', 'equipmentItem', 'checker']);
+        $this->applyTrashedFilter($query, $request);
 
         if ($request->filled('search.value')) {
             $search = $request->input('search.value');
@@ -35,7 +36,7 @@ class ConditionApiController extends BaseApiController
 
         $limit = $request->input('length', 10);
         $start = $request->input('start', 0);
-        $page = ($start / $limit) + 1;
+        $limit = max($limit, 1); $page = (int)($start / $limit) + 1;
 
         $conditions = $query->orderByDesc('check_date')->paginate($limit, ['*'], 'page', $page);
 
@@ -83,7 +84,12 @@ class ConditionApiController extends BaseApiController
             'previous_condition' => $previousCondition,
         ]));
 
-        $equipment->update(['condition' => $request->condition]);
+        if ($equipmentItemId) {
+            $equipment->syncConditionFromItems();
+        } else {
+            $equipment->items()->update(['condition' => $request->condition]);
+            $equipment->syncConditionFromItems();
+        }
 
         return $this->sendSuccess($condition, 'Pemeriksaan kondisi berhasil dicatat', 201);
     }

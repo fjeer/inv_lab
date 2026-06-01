@@ -20,6 +20,7 @@
                     <h3 class="text-2xl font-bold text-slate-800 stat-total-equipment">--</h3>
                     <span class="text-xs text-emerald-600 font-medium stat-equipment-baik">-- Baik</span>
                 </div>
+                <p class="text-[11px] text-slate-400 mt-0.5">Total Stok: <span class="font-semibold text-slate-600 stat-total-stok">--</span> item</p>
             </div>
         </div>
     </div>
@@ -93,6 +94,7 @@ $(document).ready(function() {
             
             // Update Stats
             $('.stat-total-equipment').text(stats.total_equipment);
+            $('.stat-total-stok').text(stats.total_stok);
             $('.stat-equipment-baik').text(stats.equipment_baik + ' Baik');
             $('.stat-total-laboratories').text(stats.total_laboratories);
             $('.stat-active-borrowings').text(stats.active_borrowings);

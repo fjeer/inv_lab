@@ -50,7 +50,7 @@ class QrCodePrint extends Component
     public function loadSelectedItems(): void
     {
         if (empty($this->selectedItems)) {
-            session()->flash('error', 'Pilih minimal satu item untuk dicetak.');
+            $this->dispatch('swal', title: 'Gagal', text: 'Pilih minimal satu item untuk dicetak.', icon: 'error');
             return;
         }
 

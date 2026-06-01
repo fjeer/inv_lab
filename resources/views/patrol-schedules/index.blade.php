@@ -41,6 +41,14 @@
                 <option value="">Semua Asisten</option>
             </select>
         </div>
+        <div>
+            <label class="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1.5">Status Data</label>
+            <select id="filter-trash" class="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/30">
+                <option value="">Aktif</option>
+                <option value="with">Semua</option>
+                <option value="only">Terhapus</option>
+            </select>
+        </div>
     </div>
 
     <div class="overflow-x-auto">
@@ -153,6 +161,7 @@ $(document).ready(function() {
                 d.laboratory_id = $('#filter-lab').val();
                 d.day_of_week = $('#filter-day').val();
                 d.user_id = $('#filter-assistant').val();
+                d.trash_status = $('#filter-trash').val();
             },
             dataSrc: (json) => {
                 json.recordsTotal = json.meta.total;
@@ -202,7 +211,7 @@ $(document).ready(function() {
     });
 
     // Custom filtering
-    $('#filter-lab, #filter-day, #filter-assistant').on('change', function() {
+    $('#filter-lab, #filter-day, #filter-assistant, #filter-trash').on('change', function() {
         table.ajax.reload();
     });
 

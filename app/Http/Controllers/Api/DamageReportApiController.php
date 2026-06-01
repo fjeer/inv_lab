@@ -11,6 +11,7 @@ class DamageReportApiController extends BaseApiController
     {
         $user = $request->user();
         $query = DamageReport::with(['equipment.laboratory', 'equipmentItem', 'reporter', 'handler']);
+        $this->applyTrashedFilter($query, $request);
 
         if ($user->isPengguna()) {
             $query->where('reported_by', $user->id);
@@ -38,7 +39,7 @@ class DamageReportApiController extends BaseApiController
 
         $limit = $request->input('length', 10);
         $start = $request->input('start', 0);
-        $page = ($start / $limit) + 1;
+        $limit = max($limit, 1); $page = (int)($start / $limit) + 1;
 
         $reports = $query->orderByDesc('id')->paginate($limit, ['*'], 'page', $page);
 
@@ -80,17 +81,15 @@ class DamageReportApiController extends BaseApiController
             'status' => 'reported',
         ]));
 
-        // Update equipment condition automatically
-        $equipment = \App\Models\Equipment::find($request->equipment_id);
+        // Update equipment item condition automatically
         $newCondition = $request->damage_type === 'berat' ? 'rusak_berat' : 'rusak_ringan';
         
         $previousCondition = $equipmentItem->condition;
         $equipmentItem->update(['condition' => $newCondition]);
-        $equipment->update(['condition' => $newCondition]);
 
         // Create condition history
         \App\Models\EquipmentCondition::create([
-            'equipment_id' => $equipment->id,
+            'equipment_id' => $equipmentItem->equipment_id,
             'equipment_item_id' => $equipmentItem->id,
             'checked_by' => $request->user()->id,
             'condition' => $newCondition,
@@ -104,12 +103,16 @@ class DamageReportApiController extends BaseApiController
 
     public function show($id)
     {
-        $report = DamageReport::with(['equipment.laboratory', 'equipmentItem', 'reporter', 'handler'])->find($id);
+        $report = DamageReport::withTrashed()->with(['equipment.laboratory', 'equipmentItem', 'reporter', 'handler'])->find($id);
         return $report ? $this->sendSuccess($report, 'Detail ditemukan') : $this->sendError('Not found');
     }
 
     public function updateStatus(Request $request, $id)
     {
+        if (! $request->user()?->hasRole('admin_lab', 'asisten_lab', 'admin', 'asisten')) {
+            return $this->sendError('Anda tidak memiliki akses untuk menangani laporan kerusakan', [], 403);
+        }
+
         $report = DamageReport::with(['equipment', 'equipmentItem'])->find($id);
         if (!$report) {
             return $this->sendError('Laporan kerusakan tidak ditemukan');
@@ -117,6 +120,7 @@ class DamageReportApiController extends BaseApiController
 
         $validator = \Illuminate\Support\Facades\Validator::make($request->all(), [
             'status' => 'required|in:reported,in_review,in_repair,repaired,unrepairable,closed',
+            'item_condition' => 'nullable|in:baik,rusak_ringan,rusak_berat,hilang',
             'repair_cost' => 'nullable|numeric|min:0',
             'repair_notes' => 'nullable|string',
         ]);
@@ -127,10 +131,15 @@ class DamageReportApiController extends BaseApiController
 
         $validated = $validator->validated();
 
+        $newCondition = $validated['item_condition'] ?? match ($validated['status']) {
+            'repaired' => 'baik',
+            'unrepairable' => 'rusak_berat',
+            default => null,
+        };
+
         $data = [
             'status' => $validated['status'],
             'handled_by' => $request->user()->id,
-            'handled_at' => now(),
         ];
 
         if (isset($validated['repair_cost'])) {
@@ -145,41 +154,65 @@ class DamageReportApiController extends BaseApiController
             $data['resolved_at'] = now();
         }
 
-        $report->update($data);
+        \Illuminate\Support\Facades\DB::transaction(function () use ($report, $data, $newCondition, $request, $validated) {
+            $report->update($data);
 
-        // Update equipment condition based on status
-        if ($validated['status'] === 'repaired' && $report->equipmentItem) {
-            $previousCondition = $report->equipmentItem->condition;
-            $report->equipmentItem->update(['condition' => 'baik']);
-            if ($report->equipment) {
-                $report->equipment->update(['condition' => 'baik']);
+            if (! $newCondition || ! $report->equipmentItem) {
+                return;
             }
+
+            $previousCondition = $report->equipmentItem->condition;
+            $report->equipmentItem->update(['condition' => $newCondition]);
+            $report->equipment->syncConditionFromItems();
+
+            if ($previousCondition === $newCondition) {
+                return;
+            }
+
             \App\Models\EquipmentCondition::create([
                 'equipment_id' => $report->equipment_id,
                 'equipment_item_id' => $report->equipment_item_id,
                 'checked_by' => $request->user()->id,
-                'condition' => 'baik',
+                'condition' => $newCondition,
                 'previous_condition' => $previousCondition,
                 'check_date' => now()->toDateString(),
-                'description' => 'Otomatis: Selesai Perbaikan Laporan Kerusakan'
+                'description' => 'Update dari penanganan laporan kerusakan #' . $report->id,
+                'action_taken' => $validated['repair_notes'] ?? null,
             ]);
-        } elseif ($validated['status'] === 'unrepairable' && $report->equipmentItem) {
-            $previousCondition = $report->equipmentItem->condition;
-            $report->equipmentItem->update(['condition' => 'rusak_berat']);
-            if ($report->equipment) {
-                $report->equipment->update(['condition' => 'rusak_berat', 'status' => 'disposed']);
-            }
-            \App\Models\EquipmentCondition::create([
-                'equipment_id' => $report->equipment_id,
-                'equipment_item_id' => $report->equipment_item_id,
-                'checked_by' => $request->user()->id,
-                'condition' => 'rusak_berat',
-                'previous_condition' => $previousCondition,
-                'check_date' => now()->toDateString(),
-                'description' => 'Otomatis: Dinyatakan Tidak Bisa Diperbaiki (Afkir)'
-            ]);
+        });
+
+        return $this->sendSuccess($report->fresh(['equipment', 'equipmentItem', 'handler']), 'Status laporan kerusakan dan kondisi barang berhasil diperbarui');
+    }
+
+    public function destroy(Request $request, $id)
+    {
+        if (! $request->user()?->hasRole('admin_lab', 'admin')) {
+            return $this->sendError('Anda tidak memiliki akses untuk menghapus laporan kerusakan', [], 403);
         }
 
-        return $this->sendSuccess($report, 'Status laporan kerusakan berhasil diperbarui');
+        $report = DamageReport::find($id);
+        if (! $report) {
+            return $this->sendError('Laporan kerusakan tidak ditemukan');
+        }
+
+        $report->delete();
+
+        return $this->sendSuccess(null, 'Laporan kerusakan berhasil dihapus');
+    }
+
+    public function forceDestroy(Request $request, $id)
+    {
+        if (! $request->user()?->hasRole('admin_lab', 'admin')) {
+            return $this->sendError('Anda tidak memiliki akses untuk menghapus permanen laporan kerusakan', [], 403);
+        }
+
+        $report = DamageReport::onlyTrashed()->find($id);
+        if (! $report) {
+            return $this->sendError('Laporan kerusakan terhapus tidak ditemukan');
+        }
+
+        $report->forceDelete();
+
+        return $this->sendSuccess(null, 'Laporan kerusakan berhasil dihapus permanen');
     }
 }

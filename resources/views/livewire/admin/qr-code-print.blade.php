@@ -7,11 +7,6 @@
         <p class="text-sm text-slate-500 mt-1">Pilih laboratorium dan alat untuk mencetak QR code secara massal.</p>
     </div>
 
-    {{-- Flash messages --}}
-    @if(session()->has('error'))
-    <div class="p-4 bg-red-50 border border-red-200 text-red-700 rounded-xl text-sm">{{ session('error') }}</div>
-    @endif
-
     {{-- Filter --}}
     <div class="bg-white rounded-2xl border border-slate-200/60 shadow-sm p-5">
         <div class="flex flex-col sm:flex-row gap-4">

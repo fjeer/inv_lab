@@ -5,9 +5,12 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Support\Facades\DB;
 
 class Equipment extends Model
 {
+    use SoftDeletes;
     protected static function booted()
     {
         static::created(function ($equipment) {
@@ -15,7 +18,9 @@ class Equipment extends Model
         });
 
         static::updated(function ($equipment) {
-            $equipment->generateItems();
+            if ($equipment->wasChanged('quantity')) {
+                $equipment->generateItems();
+            }
         });
     }
 
@@ -114,18 +119,66 @@ class Equipment extends Model
     /* ---- Helpers ---- */
 
     /**
-     * Generate individual EquipmentItems with QR codes based on quantity.
+     * Generate or remove EquipmentItems based on quantity changes.
      */
     public function generateItems(): void
     {
-        $existingCount = $this->items()->count();
+        DB::transaction(function () {
+            $activeCount = $this->items()->count();
 
-        for ($i = $existingCount + 1; $i <= $this->quantity; $i++) {
-            $this->items()->create([
-                'sequence_number' => $i,
-                'qr_code' => EquipmentItem::generateQrCode($this, $i),
-                'condition' => $this->condition ?? 'baik',
-            ]);
+            if ($this->quantity > $activeCount) {
+                $existingItems = $this->items()->withTrashed()->get()->keyBy('sequence_number');
+
+                for ($i = 1; $i <= $this->quantity; $i++) {
+                    $item = $existingItems->get($i);
+
+                    if ($item) {
+                        if ($item->trashed()) {
+                            $item->restore();
+                        }
+
+                        continue;
+                    }
+
+                    $this->items()->create([
+                        'sequence_number' => $i,
+                        'qr_code' => EquipmentItem::generateQrCode($this, $i),
+                        'condition' => 'baik',
+                    ]);
+                }
+            } elseif ($this->quantity < $activeCount) {
+                $this->items()
+                    ->whereNull('deleted_at')
+                    ->where('sequence_number', '>', $this->quantity)
+                    ->orderByDesc('sequence_number')
+                    ->get()
+                    ->each
+                    ->delete();
+            }
+
+            $this->syncConditionFromItems();
+        });
+    }
+
+    public function syncConditionFromItems(): void
+    {
+        $conditions = $this->items()
+            ->select('condition')
+            ->pluck('condition');
+
+        if ($conditions->isEmpty()) {
+            return;
+        }
+
+        $condition = match (true) {
+            $conditions->contains('rusak_berat') => 'rusak_berat',
+            $conditions->contains('rusak_ringan') => 'rusak_ringan',
+            $conditions->every(fn (string $condition) => $condition === 'hilang') => 'hilang',
+            default => 'baik',
+        };
+
+        if ($this->condition !== $condition) {
+            $this->updateQuietly(['condition' => $condition]);
         }
     }
 }

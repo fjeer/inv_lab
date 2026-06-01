@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\DamageReport;
 use App\Models\Equipment;
+use App\Models\EquipmentItem;
 use App\Models\LabBorrowing;
 use App\Models\Laboratory;
 use App\Models\PatrolSchedule;
@@ -29,6 +30,7 @@ class DashboardController extends Controller
         $stats = [
             'total_labs' => Laboratory::count(),
             'total_equipment' => Equipment::count(),
+            'total_stok' => EquipmentItem::count(),
             'total_users' => User::count(),
             'equipment_baik' => Equipment::where('condition', 'baik')->count(),
             'equipment_rusak' => Equipment::whereIn('condition', ['rusak_ringan', 'rusak_berat'])->count(),
@@ -55,6 +57,7 @@ class DashboardController extends Controller
     {
         $stats = [
             'total_equipment' => Equipment::count(),
+            'total_stok' => EquipmentItem::count(),
             'equipment_baik' => Equipment::where('condition', 'baik')->count(),
             'equipment_rusak' => Equipment::whereIn('condition', ['rusak_ringan', 'rusak_berat'])->count(),
             'pending_borrowings' => LabBorrowing::where('status', 'pending')->count(),

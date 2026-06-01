@@ -62,7 +62,7 @@ class RoleManagement extends Component
         $this->resetForm();
         $this->loadData();
 
-        session()->flash('message', 'Role berhasil dibuat.');
+        $this->dispatch('swal', title: 'Berhasil!', text: 'Role berhasil dibuat.', icon: 'success');
     }
 
     public function editRole(int $roleId): void
@@ -95,7 +95,7 @@ class RoleManagement extends Component
         $this->resetForm();
         $this->loadData();
 
-        session()->flash('message', 'Role berhasil diperbarui.');
+        $this->dispatch('swal', title: 'Berhasil!', text: 'Role berhasil diperbarui.', icon: 'success');
     }
 
     public function cancelEdit(): void
@@ -109,14 +109,14 @@ class RoleManagement extends Component
         $role = Role::findOrFail($roleId);
 
         if ($role->users()->count() > 0) {
-            session()->flash('error', 'Role tidak bisa dihapus karena masih digunakan oleh pengguna.');
+            $this->dispatch('swal', title: 'Gagal', text: 'Role tidak bisa dihapus karena masih digunakan oleh pengguna.', icon: 'error');
             return;
         }
 
         $role->delete();
         $this->loadData();
 
-        session()->flash('message', 'Role berhasil dihapus.');
+        $this->dispatch('swal', title: 'Berhasil!', text: 'Role berhasil dihapus.', icon: 'success');
     }
 
     public function togglePermission(int $roleId, int $permissionId): void

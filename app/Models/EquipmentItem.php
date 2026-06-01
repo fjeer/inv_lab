@@ -5,9 +5,20 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\SoftDeletes;
 
 class EquipmentItem extends Model
 {
+    use SoftDeletes;
+
+    protected static function booted(): void
+    {
+        static::saved(fn (EquipmentItem $item) => $item->equipment?->syncConditionFromItems());
+        static::deleted(fn (EquipmentItem $item) => $item->equipment?->syncConditionFromItems());
+        static::restored(fn (EquipmentItem $item) => $item->equipment?->syncConditionFromItems());
+        static::forceDeleted(fn (EquipmentItem $item) => $item->equipment?->syncConditionFromItems());
+    }
+
     protected $fillable = [
         'equipment_id',
         'sequence_number',
@@ -30,7 +41,7 @@ class EquipmentItem extends Model
 
     public function equipment(): BelongsTo
     {
-        return $this->belongsTo(Equipment::class);
+        return $this->belongsTo(Equipment::class)->withTrashed();
     }
 
     public function lastChecker(): BelongsTo
@@ -43,9 +54,19 @@ class EquipmentItem extends Model
         return $this->hasMany(PatrolLog::class);
     }
 
+    public function damageReports(): HasMany
+    {
+        return $this->hasMany(DamageReport::class, 'equipment_item_id');
+    }
+
+    public function replacedByItems(): HasMany
+    {
+        return $this->hasMany(EquipmentItem::class, 'replaces_equipment_item_id');
+    }
+
     public function replacesEquipmentItem(): BelongsTo
     {
-        return $this->belongsTo(EquipmentItem::class, 'replaces_equipment_item_id');
+        return $this->belongsTo(EquipmentItem::class, 'replaces_equipment_item_id')->withTrashed();
     }
 
     /* ---- Accessors ---- */

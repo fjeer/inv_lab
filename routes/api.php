@@ -116,6 +116,8 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/damage-reports/{id}', [DamageReportApiController::class, 'show']);
     Route::post('/damage-reports', [DamageReportApiController::class, 'store']);
     Route::put('/damage-reports/{id}/status', [DamageReportApiController::class, 'updateStatus']);
+    Route::delete('/damage-reports/{id}', [DamageReportApiController::class, 'destroy']);
+    Route::delete('/damage-reports/{id}/force', [DamageReportApiController::class, 'forceDestroy']);
 
     // Patrol Schedules (Revisi)
     Route::get('/patrol-schedules', [PatrolScheduleApiController::class, 'index']);

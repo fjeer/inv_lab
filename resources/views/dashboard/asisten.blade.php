@@ -45,6 +45,7 @@
         </div>
         <p class="text-2xl font-bold text-slate-800">{{ $stats['total_equipment'] }}</p>
         <p class="text-xs text-slate-400 font-medium mt-0.5">Total Alat</p>
+        <p class="text-[11px] text-slate-400 mt-0.5">Total Stok: <span class="font-semibold text-slate-600">{{ $stats['total_stok'] }}</span> item</p>
         <div class="mt-2 flex gap-2">
             <span class="text-xs bg-emerald-50 text-emerald-700 px-2 py-0.5 rounded-full">{{ $stats['equipment_baik'] }} Baik</span>
             <span class="text-xs bg-amber-50 text-amber-700 px-2 py-0.5 rounded-full">{{ $stats['equipment_rusak'] }} Rusak</span>

@@ -14,6 +14,14 @@
 </div>
 
 <div class="bg-white rounded-2xl border border-slate-100 shadow-sm p-6 overflow-hidden">
+    <div class="mb-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-end">
+        <label for="filter-trash" class="text-xs font-semibold uppercase tracking-wider text-slate-500">Status Data</label>
+        <select id="filter-trash" class="rounded-xl border border-slate-200 bg-slate-50 px-4 py-2 text-sm text-slate-600">
+            <option value="">Aktif</option>
+            <option value="with">Semua</option>
+            <option value="only">Terhapus</option>
+        </select>
+    </div>
     <div class="overflow-x-auto">
         <table id="procurement-table" class="w-full text-sm">
             <thead>
@@ -35,11 +43,14 @@
 @push('scripts')
 <script>
 $(document).ready(function() {
-    $('#procurement-table').DataTable({
+    const table = $('#procurement-table').DataTable({
         processing: true,
         serverSide: true,
         ajax: {
             url: '/api/procurements',
+            data: function (d) {
+                d.trash_status = $('#filter-trash').val();
+            },
             dataSrc: (json) => {
                 json.recordsTotal = json.meta.total;
                 json.recordsFiltered = json.meta.total;
@@ -104,6 +115,10 @@ $(document).ready(function() {
         order: [[0, 'desc']]
     });
 
+    $('#filter-trash').on('change', function() {
+        table.ajax.reload();
+    });
+
     window.deleteProcurement = (id) => {
         Swal.fire({
             title: 'Hapus Pengajuan?',
@@ -121,7 +136,7 @@ $(document).ready(function() {
                     type: 'DELETE',
                     success: (res) => {
                         window.showAlert('Berhasil', 'Pengajuan pengadaan telah dihapus', 'success');
-                        $('#procurement-table').DataTable().ajax.reload();
+                        table.ajax.reload();
                     },
                     error: (err) => {
                         Swal.fire('Error', err.responseJSON?.message || 'Gagal menghapus pengajuan.', 'error');

@@ -25,6 +25,11 @@
             @foreach(['ringan'=>'Ringan','sedang'=>'Sedang','berat'=>'Berat'] as $v=>$l)
             <option value="{{ $v }}">{{ $l }}</option>@endforeach
         </select>
+        <select id="filter-trash" class="px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/30">
+            <option value="">Data Aktif</option>
+            <option value="with">Semua Data</option>
+            <option value="only">Data Terhapus</option>
+        </select>
         <button type="button" id="btn-filter" class="px-4 py-2 bg-slate-800 text-white text-sm font-medium rounded-xl hover:bg-slate-700 transition-colors">Filter</button>
     </div>
 </div>
@@ -60,6 +65,7 @@ $(document).ready(function() {
             data: function (d) {
                 d.status = $('#filter-status').val();
                 d.damage_type = $('#filter-damage-type').val();
+                d.trash_status = $('#filter-trash').val();
             },
             dataSrc: (json) => {
                 json.recordsTotal = json.meta.total;
@@ -124,8 +130,16 @@ $(document).ready(function() {
             { 
                 data: 'id', 
                 className: 'px-5 py-4 text-right',
-                render: function(data) {
-                    return `<a href="/damage-reports/${data}" class="text-xs text-blue-600 hover:text-blue-700 font-medium">Detail</a>`;
+                render: function(data, type, row) {
+                    let actions = `<a href="/damage-reports/${data}" class="text-xs text-blue-600 hover:text-blue-700 font-medium">Detail</a>`;
+                    @if(Auth::user()->hasRole('admin_lab', 'admin'))
+                    if (!row.deleted_at) {
+                        actions += `<button onclick="deleteDamageReport(${data})" class="ml-3 text-xs text-red-600 hover:text-red-700 font-medium">Hapus</button>`;
+                    } else {
+                        actions += `<button onclick="forceDeleteDamageReport(${data})" class="ml-3 text-xs text-red-700 hover:text-red-800 font-medium">Hapus Permanen</button>`;
+                    }
+                    @endif
+                    return actions;
                 }
             }
         ]
@@ -134,6 +148,64 @@ $(document).ready(function() {
     $('#btn-filter').click(function() {
         table.ajax.reload();
     });
+
+    window.deleteDamageReport = (id) => {
+        Swal.fire({
+            title: 'Hapus Laporan Kerusakan?',
+            text: 'Laporan akan dipindahkan ke Data Terhapus dan masih dapat ditampilkan lewat filter.',
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#dc2626',
+            cancelButtonColor: '#64748b',
+            confirmButtonText: 'Ya, Hapus',
+            cancelButtonText: 'Batal'
+        }).then((result) => {
+            if (!result.isConfirmed) {
+                return;
+            }
+
+            $.ajax({
+                url: `/api/damage-reports/${id}`,
+                type: 'DELETE',
+                success: function(res) {
+                    window.showAlert('Berhasil!', res.message, 'success');
+                    table.ajax.reload();
+                },
+                error: function(err) {
+                    Swal.fire('Error', err.responseJSON?.message || 'Gagal menghapus laporan kerusakan.', 'error');
+                }
+            });
+        });
+    };
+
+    window.forceDeleteDamageReport = (id) => {
+        Swal.fire({
+            title: 'Hapus Permanen?',
+            text: 'Laporan kerusakan akan dihapus permanen dan tidak bisa direstore.',
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#b91c1c',
+            cancelButtonColor: '#64748b',
+            confirmButtonText: 'Ya, Hapus Permanen',
+            cancelButtonText: 'Batal'
+        }).then((result) => {
+            if (!result.isConfirmed) {
+                return;
+            }
+
+            $.ajax({
+                url: `/api/damage-reports/${id}/force`,
+                type: 'DELETE',
+                success: function(res) {
+                    window.showAlert('Berhasil!', res.message, 'success');
+                    table.ajax.reload();
+                },
+                error: function(err) {
+                    Swal.fire('Error', err.responseJSON?.message || 'Gagal menghapus permanen laporan kerusakan.', 'error');
+                }
+            });
+        });
+    };
 });
 </script>
 @endpush

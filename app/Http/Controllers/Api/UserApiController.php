@@ -13,6 +13,7 @@ class UserApiController extends BaseApiController
     public function index(Request $request)
     {
         $query = User::query();
+        $this->applyTrashedFilter($query, $request);
 
         if ($request->filled('role')) {
             $query->where('role', $request->role);
@@ -37,7 +38,7 @@ class UserApiController extends BaseApiController
         if ($request->has('length')) {
             $limit = $request->input('length', 10);
             $start = $request->input('start', 0);
-            $page = ($start / $limit) + 1;
+            $limit = max($limit, 1); $page = (int)($start / $limit) + 1;
             $users = $query->orderBy('name')->paginate($limit, ['*'], 'page', $page);
             return $this->sendPaginated($users, 'Data pengguna dikumpulkan');
         }
@@ -48,7 +49,7 @@ class UserApiController extends BaseApiController
 
     public function show($id)
     {
-        $user = User::findOrFail($id);
+        $user = User::withTrashed()->findOrFail($id);
         return $this->sendSuccess($user, 'Detail ditemukan');
     }
 

@@ -6,6 +6,7 @@ use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\EquipmentCategoryController;
 use App\Http\Controllers\EquipmentConditionController;
 use App\Http\Controllers\EquipmentController;
+use App\Http\Controllers\EquipmentItemController;
 use App\Http\Controllers\LabBorrowingController;
 use App\Http\Controllers\LaboratoryController;
 use App\Http\Controllers\ProcurementController;
@@ -52,6 +53,9 @@ Route::middleware('auth')->group(function () {
     Route::middleware('role:admin_lab,asisten_lab,admin,asisten')->group(function () {
         Route::get('/equipment', [EquipmentController::class, 'index'])->name('equipment.index');
         Route::get('/equipment/{equipment}', [EquipmentController::class, 'show'])->name('equipment.show');
+        Route::delete('/equipment/{equipment}/items/{item}', [EquipmentItemController::class, 'destroy'])->name('equipment-items.destroy');
+        Route::post('/equipment/{equipment}/items/{item}/restore', [EquipmentItemController::class, 'restore'])->name('equipment-items.restore');
+        Route::delete('/equipment/{equipment}/items/{item}/force', [EquipmentItemController::class, 'forceDestroy'])->name('equipment-items.force-destroy');
     });
 
     // Borrowings
@@ -68,7 +72,7 @@ Route::middleware('auth')->group(function () {
     Route::get('/damage-reports', [DamageReportController::class, 'index'])->name('damage-reports.index');
     Route::get('/damage-reports/create', [DamageReportController::class, 'create'])->name('damage-reports.create');
     Route::post('/damage-reports', [DamageReportController::class, 'store'])->name('damage-reports.store');
-    Route::get('/damage-reports/{damage_report}', [DamageReportController::class, 'show'])->name('damage-reports.show');
+    Route::get('/damage-reports/{damage_report}', [DamageReportController::class, 'show'])->withTrashed()->name('damage-reports.show');
 
     // Procurements (read/create for all)
     Route::get('/procurements', [ProcurementController::class, 'index'])->name('procurements.index');
