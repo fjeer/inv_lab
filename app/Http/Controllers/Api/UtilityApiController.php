@@ -4,19 +4,17 @@ namespace App\Http\Controllers\Api;
 
 use App\Models\EquipmentCategory;
 use App\Models\Laboratory;
-use Illuminate\Http\Request;
+use App\Models\User;
 
 class UtilityApiController extends BaseApiController
 {
-    /**
-     * Get options for dropdowns.
-     */
     public function options()
     {
-        $assistants = \App\Models\User::where(function ($q) {
-            $q->where('role', 'asisten_lab')
-              ->orWhereHas('roleRelation', fn ($r) => $r->where('name', 'asisten'));
-        })->where('is_active', true)->orderBy('name')->get(['id', 'name']);
+        $assistants = User::whereHas('roleRelation', fn ($r) => $r->where('name', 'asisten'))
+            ->orWhere('role', 'asisten_lab')
+            ->where('is_active', true)
+            ->orderBy('name')
+            ->get(['id', 'name']);
 
         return $this->sendSuccess([
             'laboratories' => Laboratory::select('id', 'name')->orderBy('name')->get(),

@@ -2,58 +2,55 @@
 
 namespace App\Http\Controllers\Api;
 
-use App\Models\User;
-use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Hash;
 use App\Http\Requests\StoreUserRequest;
 use App\Http\Requests\UpdateUserRequest;
+use App\Http\Resources\UserResource;
+use App\Models\User;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Hash;
 
 class UserApiController extends BaseApiController
 {
-    public function index(Request $request)
+    public function index(Request $request): JsonResponse
     {
         $query = User::query();
         $this->applyTrashedFilter($query, $request);
 
         if ($request->filled('role')) {
-            $query->where('role', $request->role);
-        }
-
-        // DataTables search
-        $search = null;
-        if ($request->filled('search.value')) {
-            $search = $request->input('search.value');
-        } elseif ($request->filled('search') && !is_array($request->input('search'))) {
-            $search = $request->input('search');
-        }
-
-        if ($search) {
-            $query->where(function ($q) use ($search) {
-                $q->where('name', 'like', "%$search%")
-                  ->orWhere('email', 'like', "%$search%")
-                  ->orWhere('nim_nip', 'like', "%$search%");
+            $query->where(function ($q) use ($request) {
+                $q->where('role', $request->role)
+                  ->orWhereHas('roleRelation', fn ($r) => $r->where('name', $request->role));
             });
         }
 
-        if ($request->has('length')) {
-            $limit = $request->input('length', 10);
-            $start = $request->input('start', 0);
-            $limit = max($limit, 1); $page = (int)($start / $limit) + 1;
-            $users = $query->orderBy('name')->paginate($limit, ['*'], 'page', $page);
-            return $this->sendPaginated($users, 'Data pengguna dikumpulkan');
+        $search = $this->getSearch($request);
+
+        if ($search !== null) {
+            $query->where(function ($q) use ($search) {
+                $q->where('name', 'like', "%{$search}%")
+                  ->orWhere('email', 'like', "%{$search}%")
+                  ->orWhere('nim_nip', 'like', "%{$search}%");
+            });
         }
 
-        $users = $query->orderBy('name')->get();
-        return $this->sendSuccess($users, 'Data pengguna dikumpulkan');
+        $perPage = $this->getPerPage($request);
+        $page = $this->getPageFromRequest($request);
+
+        $users = $query->orderBy('name')->paginate($perPage, ['*'], 'page', $page);
+
+        return $this->sendPaginated($users, 'Data pengguna berhasil dimuat');
     }
 
-    public function show($id)
+    public function show(User $user): JsonResponse
     {
-        $user = User::withTrashed()->findOrFail($id);
-        return $this->sendSuccess($user, 'Detail ditemukan');
+        return $this->sendSuccess(
+            UserResource::make($user),
+            'Detail ditemukan',
+        );
     }
 
-    public function store(StoreUserRequest $request)
+    public function store(StoreUserRequest $request): JsonResponse
     {
         $validated = $request->validated();
 
@@ -68,12 +65,15 @@ class UserApiController extends BaseApiController
             'is_active' => true,
         ]);
 
-        return $this->sendSuccess($user, 'Pengguna berhasil dibuat', 201);
+        return $this->sendSuccess(
+            UserResource::make($user),
+            'Pengguna berhasil dibuat',
+            201,
+        );
     }
 
-    public function update(UpdateUserRequest $request, $id)
+    public function update(UpdateUserRequest $request, User $user): JsonResponse
     {
-        $user = User::findOrFail($id);
         $validated = $request->validated();
 
         $user->update([
@@ -86,16 +86,20 @@ class UserApiController extends BaseApiController
             'is_active' => $validated['is_active'] ?? $user->is_active,
         ]);
 
-        if (!empty($validated['password'])) {
+        if (! empty($validated['password'])) {
             $user->update(['password' => Hash::make($validated['password'])]);
         }
 
-        return $this->sendSuccess($user, 'Pengguna berhasil diperbarui');
+        return $this->sendSuccess(
+            UserResource::make($user),
+            'Pengguna berhasil diperbarui',
+        );
     }
 
-    public function destroy($id)
+    public function destroy(User $user): JsonResponse
     {
-        User::destroy($id);
+        $user->delete();
+
         return $this->sendSuccess(null, 'Pengguna berhasil dihapus');
     }
 }

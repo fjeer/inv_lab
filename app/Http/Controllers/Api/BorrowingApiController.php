@@ -2,30 +2,38 @@
 
 namespace App\Http\Controllers\Api;
 
+use App\Actions\ApproveBorrowingAction;
+use App\Actions\CreateBorrowingAction;
+use App\Actions\RejectBorrowingAction;
+use App\Actions\TransitionBorrowingAction;
+use App\Http\Requests\Api\StoreBorrowingRequest;
+use App\Http\Resources\BorrowingResource;
 use App\Models\LabBorrowing;
-use App\Models\ActivityLog;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Validator;
 
 class BorrowingApiController extends BaseApiController
 {
-    public function index(Request $request)
+    public function __construct(
+        private readonly CreateBorrowingAction $createBorrowing,
+        private readonly ApproveBorrowingAction $approveBorrowing,
+        private readonly RejectBorrowingAction $rejectBorrowing,
+        private readonly TransitionBorrowingAction $transitionBorrowing,
+    ) {}
+
+    public function index(Request $request): JsonResponse
     {
         $query = LabBorrowing::with(['user', 'laboratory']);
         $this->applyTrashedFilter($query, $request);
 
-        // DataTables search
-        if ($request->filled('search.value')) {
-            $search = $request->input('search.value');
+        $search = $this->getSearch($request);
+
+        if ($search !== null) {
             $query->where(function ($q) use ($search) {
-                $q->where('purpose', 'like', '%' . $search . '%')
-                  ->orWhere('activity_type', 'like', '%' . $search . '%')
-                  ->orWhereHas('user', function ($uq) use ($search) {
-                      $uq->where('name', 'like', '%' . $search . '%');
-                  })
-                  ->orWhereHas('laboratory', function ($lq) use ($search) {
-                      $lq->where('name', 'like', '%' . $search . '%');
-                  });
+                $q->where('purpose', 'like', "%{$search}%")
+                  ->orWhere('activity_type', 'like', "%{$search}%")
+                  ->orWhereHas('user', fn ($uq) => $uq->where('name', 'like', "%{$search}%"))
+                  ->orWhereHas('laboratory', fn ($lq) => $lq->where('name', 'like', "%{$search}%"));
             });
         }
 
@@ -37,165 +45,87 @@ class BorrowingApiController extends BaseApiController
             $query->where('laboratory_id', $request->laboratory_id);
         }
 
-        // Filtering by current user if they are 'pengguna'
-        if ($request->user() && $request->user()->role === 'pengguna') {
+        if ($request->user()->isPengguna()) {
             $query->where('user_id', $request->user()->id);
         }
 
-        // DataTables pagination: start (offset) and length (limit)
-        $limit = $request->input('length', 10);
-        $start = $request->input('start', 0);
-        $limit = max($limit, 1); $page = (int)($start / $limit) + 1;
+        $perPage = $this->getPerPage($request);
+        $page = $this->getPageFromRequest($request);
 
-        $borrowings = $query->orderByDesc('id')->paginate($limit, ['*'], 'page', $page);
+        $borrowings = $query->orderByDesc('id')->paginate($perPage, ['*'], 'page', $page);
 
         return $this->sendPaginated($borrowings, 'Data peminjaman berhasil dimuat');
     }
 
-    public function show($id)
+    public function show(LabBorrowing $borrowing): JsonResponse
     {
-        $borrowing = LabBorrowing::withTrashed()->with(['user', 'laboratory', 'approver'])->find($id);
-        return $borrowing ? $this->sendSuccess($borrowing, 'Detail ditemukan') : $this->sendError('Not found');
+        $borrowing->load(['user', 'laboratory', 'approver']);
+
+        return $this->sendSuccess(
+            BorrowingResource::make($borrowing),
+            'Detail ditemukan',
+        );
     }
 
-    public function store(Request $request)
+    public function store(StoreBorrowingRequest $request): JsonResponse
     {
-        $validator = Validator::make($request->all(), [
-            'laboratory_id' => 'required|exists:laboratories,id',
-            'purpose' => 'required|string',
-            'activity_type' => 'nullable|string|max:100',
-            'borrow_date' => 'required|date|after_or_equal:today',
-            'start_time' => 'required',
-            'end_time' => 'required|after:start_time',
-            'notes' => 'nullable|string',
-        ]);
+        $borrowing = $this->createBorrowing->handle($request->toDto($request->user()->id));
 
-        if ($validator->fails()) {
-            return $this->sendError('Validation Error', $validator->errors()->toArray(), 422);
-        }
-
-        $borrowing = LabBorrowing::create([
-            'user_id' => $request->user()->id,
-            'laboratory_id' => $request->laboratory_id,
-            'purpose' => $request->purpose,
-            'activity_type' => $request->activity_type,
-            'borrow_date' => $request->borrow_date,
-            'start_time' => $request->start_time,
-            'end_time' => $request->end_time,
-            'notes' => $request->notes,
-            'status' => 'pending'
-        ]);
-
-        ActivityLog::log(
-            'create_borrowing',
-            "Mengajukan peminjaman: {$borrowing->laboratory->name} untuk {$borrowing->purpose}",
-            $borrowing
+        return $this->sendSuccess(
+            BorrowingResource::make($borrowing),
+            'Permohonan peminjaman berhasil diajukan',
+            201,
         );
-
-        return $this->sendSuccess($borrowing, 'Permohonan peminjaman berhasil diajukan', 201);
     }
 
-    public function approve(Request $request, $id)
+    public function approve(Request $request, LabBorrowing $borrowing): JsonResponse
     {
-        $borrowing = LabBorrowing::with(['laboratory', 'user'])->find($id);
-        if (!$borrowing) {
-            return $this->sendError('Not found');
-        }
+        $borrowing = $this->approveBorrowing->handle($borrowing, $request->user()->id);
 
-        $borrowing->update([
-            'status' => 'approved',
-            'approved_by' => $request->user()->id,
-            'approved_at' => now()
-        ]);
-
-        ActivityLog::log(
-            'approve_borrowing',
-            "Menyetujui peminjaman: {$borrowing->laboratory->name} ({$borrowing->user->name})",
-            $borrowing
+        return $this->sendSuccess(
+            BorrowingResource::make($borrowing),
+            'Peminjaman disetujui',
         );
-
-        return $this->sendSuccess($borrowing, 'Peminjaman disetujui');
     }
 
-    public function reject(Request $request, $id)
+    public function reject(Request $request, LabBorrowing $borrowing): JsonResponse
     {
-        $borrowing = LabBorrowing::with(['laboratory', 'user'])->find($id);
-        if (!$borrowing) {
-            return $this->sendError('Not found');
-        }
+        $request->validate(['rejection_reason' => 'required|string']);
 
-        $validator = Validator::make($request->all(), [
-            'rejection_reason' => 'required|string'
-        ]);
-
-        if ($validator->fails()) {
-            return $this->sendError('Validation Error', $validator->errors()->toArray(), 422);
-        }
-
-        $borrowing->update([
-            'status' => 'rejected',
-            'approved_by' => $request->user()->id,
-            'rejection_reason' => $request->rejection_reason
-        ]);
-
-        ActivityLog::log(
-            'reject_borrowing',
-            "Menolak peminjaman: {$borrowing->laboratory->name} ({$borrowing->user->name})",
-            $borrowing
+        $borrowing = $this->rejectBorrowing->handle(
+            $borrowing,
+            $request->user()->id,
+            $request->input('rejection_reason'),
         );
 
-        return $this->sendSuccess($borrowing, 'Peminjaman ditolak');
+        return $this->sendSuccess(
+            BorrowingResource::make($borrowing),
+            'Peminjaman ditolak',
+        );
     }
 
-    public function complete($id)
+    public function complete(LabBorrowing $borrowing): JsonResponse
     {
-        $borrowing = LabBorrowing::with('laboratory')->find($id);
-        if (!$borrowing) {
-            return $this->sendError('Not found');
-        }
+        $borrowing = $this->transitionBorrowing->complete($borrowing);
 
-        $borrowing->update(['status' => 'completed']);
-
-        ActivityLog::log(
-            'complete_borrowing',
-            "Menyelesaikan peminjaman: {$borrowing->laboratory->name}",
-            $borrowing
+        return $this->sendSuccess(
+            BorrowingResource::make($borrowing),
+            'Peminjaman selesai',
         );
-
-        return $this->sendSuccess($borrowing, 'Peminjaman selesai');
     }
 
-    public function cancel($id)
+    public function cancel(LabBorrowing $borrowing): JsonResponse
     {
-        $borrowing = LabBorrowing::with('laboratory')->find($id);
-        if (!$borrowing) {
-            return $this->sendError('Not found');
-        }
+        $borrowing = $this->transitionBorrowing->cancel($borrowing);
 
-        $borrowing->update(['status' => 'cancelled']);
-
-        ActivityLog::log(
-            'cancel_borrowing',
-            "Membatalkan peminjaman: {$borrowing->laboratory->name}",
-            $borrowing
+        return $this->sendSuccess(
+            BorrowingResource::make($borrowing),
+            'Peminjaman dibatalkan',
         );
-
-        return $this->sendSuccess($borrowing, 'Peminjaman dibatalkan');
     }
 
-    public function destroy($id)
+    public function destroy(LabBorrowing $borrowing): JsonResponse
     {
-        $borrowing = LabBorrowing::with(['laboratory', 'user'])->find($id);
-        if (!$borrowing) {
-            return $this->sendError('Peminjaman tidak ditemukan');
-        }
-
-        ActivityLog::log(
-            'delete_borrowing',
-            "Menghapus peminjaman: {$borrowing->laboratory->name} (Peminjam: {$borrowing->user->name})",
-            $borrowing
-        );
-
         $borrowing->delete();
 
         return $this->sendSuccess(null, 'Peminjaman berhasil dihapus');

@@ -17,6 +17,46 @@ class BaseApiController extends Controller
         };
     }
 
+    protected function getSearch(Request $request): ?string
+    {
+        if ($request->filled('search.value')) {
+            return $request->input('search.value');
+        }
+
+        $search = $request->input('search');
+
+        if (is_string($search) && strlen($search) > 0) {
+            return $search;
+        }
+
+        return null;
+    }
+
+    protected function getPerPage(Request $request): int
+    {
+        if ($request->has('length')) {
+            return max((int) $request->input('length', 10), 1);
+        }
+
+        if ($request->has('per_page')) {
+            return max((int) $request->input('per_page', 10), 1);
+        }
+
+        return 10;
+    }
+
+    protected function getPageFromRequest(Request $request): int
+    {
+        if ($request->has('start') && $request->has('length')) {
+            $length = max((int) $request->input('length', 10), 1);
+            $start = max((int) $request->input('start', 0), 0);
+
+            return (int) ($start / $length) + 1;
+        }
+
+        return (int) $request->input('page', 1);
+    }
+
     /**
      * Send success response.
      */

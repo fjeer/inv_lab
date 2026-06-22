@@ -2,13 +2,16 @@
 
 namespace App\Http\Controllers\Api;
 
+use App\Http\Requests\Api\StoreLaboratoryRequest;
+use App\Http\Requests\Api\UpdateLaboratoryRequest;
+use App\Http\Resources\LaboratoryResource;
 use App\Models\Laboratory;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Validator;
 
 class LaboratoryApiController extends BaseApiController
 {
-    public function index(Request $request)
+    public function index(Request $request): JsonResponse
     {
         $query = Laboratory::with(['room.building', 'responsiblePerson']);
         $this->applyTrashedFilter($query, $request);
@@ -17,114 +20,66 @@ class LaboratoryApiController extends BaseApiController
             $query->where('status', $request->status);
         }
 
-        // DataTables search
-        $search = null;
-        if ($request->filled('search.value')) {
-            $search = $request->input('search.value');
-        } elseif ($request->filled('search') && !is_array($request->input('search'))) {
-            $search = $request->input('search');
-        }
+        $search = $this->getSearch($request);
 
-        if ($search) {
+        if ($search !== null) {
             $query->where(function ($q) use ($search) {
-                $q->where('name', 'like', '%' . $search . '%')
-                  ->orWhere('code', 'like', '%' . $search . '%')
-                  ->orWhere('location', 'like', '%' . $search . '%')
+                $q->where('name', 'like', "%{$search}%")
+                  ->orWhere('code', 'like', "%{$search}%")
+                  ->orWhere('location', 'like', "%{$search}%")
                   ->orWhereHas('room', function ($sq) use ($search) {
-                      $sq->where('name', 'like', '%' . $search . '%')
-                         ->orWhereHas('building', function ($ssq) use ($search) {
-                             $ssq->where('name', 'like', '%' . $search . '%');
-                         });
+                      $sq->where('name', 'like', "%{$search}%")
+                         ->orWhereHas('building', fn ($ssq) => $ssq->where('name', 'like', "%{$search}%"));
                   });
             });
         }
 
-        if ($request->has('length')) {
-            $limit = $request->input('length', 10);
-            $start = $request->input('start', 0);
-            $limit = max($limit, 1); $page = (int)($start / $limit) + 1;
-            $labs = $query->orderBy('name')->paginate($limit, ['*'], 'page', $page);
-            return $this->sendPaginated($labs, 'Data laboratorium berhasil dimuat');
-        }
+        $perPage = $this->getPerPage($request);
+        $page = $this->getPageFromRequest($request);
 
-        $labs = $query->orderBy('name')->get();
+        $labs = $query->orderBy('name')->paginate($perPage, ['*'], 'page', $page);
 
-        return $this->sendSuccess($labs, 'Data laboratorium berhasil dimuat');
+        return $this->sendPaginated($labs, 'Data laboratorium berhasil dimuat');
     }
 
-    public function show($id)
+    public function show(Laboratory $laboratory): JsonResponse
     {
-        $lab = Laboratory::withTrashed()->with(['room.building', 'equipment.category', 'patrolSchedules.user', 'responsiblePerson'])->find($id);
+        $laboratory->load(['room.building', 'equipment.category', 'patrolSchedules.user', 'responsiblePerson']);
 
-        if (!$lab) {
-            return $this->sendError('Laboratorium tidak ditemukan');
-        }
-
-        return $this->sendSuccess($lab, 'Detail laboratorium berhasil dimuat');
+        return $this->sendSuccess(
+            LaboratoryResource::make($laboratory),
+            'Detail laboratorium berhasil dimuat',
+        );
     }
 
-    public function store(Request $request)
+    public function store(StoreLaboratoryRequest $request): JsonResponse
     {
-        $validator = Validator::make($request->all(), [
-            'name' => 'required|string|max:255',
-            'code' => 'required|string|unique:laboratories,code',
-            'room_id' => 'required|exists:rooms,id|unique:laboratories,room_id',
-            'location' => 'nullable|string',
-            'capacity' => 'nullable|integer|min:1',
-            'responsible_person_id' => 'nullable|exists:users,id',
-            'status' => 'required|in:active,inactive,maintenance',
-        ]);
+        $lab = Laboratory::create($request->validated());
 
-        if ($validator->fails()) {
-            return $this->sendError('Validation Error', $validator->errors()->toArray(), 422);
-        }
-
-        $lab = Laboratory::create($request->all());
-
-        return $this->sendSuccess($lab, 'Laboratorium berhasil dibuat', 201);
+        return $this->sendSuccess(
+            LaboratoryResource::make($lab),
+            'Laboratorium berhasil dibuat',
+            201,
+        );
     }
 
-    public function update(Request $request, $id)
+    public function update(UpdateLaboratoryRequest $request, Laboratory $laboratory): JsonResponse
     {
-        $lab = Laboratory::find($id);
+        $laboratory->update($request->validated());
 
-        if (!$lab) {
-            return $this->sendError('Laboratorium tidak ditemukan');
-        }
-
-        $validator = Validator::make($request->all(), [
-            'name' => 'required|string|max:255',
-            'code' => 'required|string|unique:laboratories,code,' . $id,
-            'room_id' => 'required|exists:rooms,id|unique:laboratories,room_id,' . $id,
-            'location' => 'nullable|string',
-            'capacity' => 'nullable|integer|min:1',
-            'responsible_person_id' => 'nullable|exists:users,id',
-            'status' => 'required|in:active,inactive,maintenance',
-        ]);
-
-        if ($validator->fails()) {
-            return $this->sendError('Validation Error', $validator->errors()->toArray(), 422);
-        }
-
-        $lab->update($request->all());
-
-        return $this->sendSuccess($lab, 'Laboratorium berhasil diperbarui');
+        return $this->sendSuccess(
+            LaboratoryResource::make($laboratory),
+            'Laboratorium berhasil diperbarui',
+        );
     }
 
-    public function destroy($id)
+    public function destroy(Laboratory $laboratory): JsonResponse
     {
-        $lab = Laboratory::find($id);
-
-        if (!$lab) {
-            return $this->sendError('Laboratorium tidak ditemukan');
-        }
-
-        // Check if laboratory has equipment
-        if ($lab->equipment()->count() > 0) {
+        if ($laboratory->equipment()->count() > 0) {
             return $this->sendError('Laboratorium tidak dapat dihapus karena masih memiliki alat');
         }
 
-        $lab->delete();
+        $laboratory->delete();
 
         return $this->sendSuccess(null, 'Laboratorium berhasil dihapus');
     }

@@ -2,28 +2,33 @@
 
 namespace App\Http\Controllers\Api;
 
+use App\Actions\RecordEquipmentConditionAction;
+use App\Http\Requests\Api\StoreConditionRequest;
+use App\Http\Resources\ConditionResource;
 use App\Models\EquipmentCondition;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
 
 class ConditionApiController extends BaseApiController
 {
-    public function index(Request $request)
+    public function __construct(
+        private readonly RecordEquipmentConditionAction $recordCondition,
+    ) {}
+
+    public function index(Request $request): JsonResponse
     {
         $query = EquipmentCondition::with(['equipment.laboratory', 'equipmentItem', 'checker']);
         $this->applyTrashedFilter($query, $request);
 
-        if ($request->filled('search.value')) {
-            $search = $request->input('search.value');
-            $query->whereHas('equipment', function ($q) use ($search) {
-                $q->where('name', 'like', '%' . $search . '%')
-                  ->orWhere('code', 'like', '%' . $search . '%');
-            });
+        $search = $this->getSearch($request);
+
+        if ($search !== null) {
+            $query->whereHas('equipment', fn ($q) => $q->where('name', 'like', "%{$search}%")->orWhere('code', 'like', "%{$search}%"));
         }
 
         if ($request->filled('laboratory_id')) {
-            $query->whereHas('equipment', function ($q) use ($request) {
-                $q->where('laboratory_id', $request->laboratory_id);
-            });
+            $query->whereHas('equipment', fn ($q) => $q->where('laboratory_id', $request->laboratory_id));
         }
 
         if ($request->filled('equipment_id')) {
@@ -34,76 +39,35 @@ class ConditionApiController extends BaseApiController
             $query->where('condition', $request->condition);
         }
 
-        $limit = $request->input('length', 10);
-        $start = $request->input('start', 0);
-        $limit = max($limit, 1); $page = (int)($start / $limit) + 1;
+        $perPage = $this->getPerPage($request);
+        $page = $this->getPageFromRequest($request);
 
-        $conditions = $query->orderByDesc('check_date')->paginate($limit, ['*'], 'page', $page);
+        $conditions = $query->orderByDesc('check_date')->paginate($perPage, ['*'], 'page', $page);
 
         return $this->sendPaginated($conditions, 'Data kondisi berhasil dimuat');
     }
 
-    public function store(Request $request)
+    public function store(StoreConditionRequest $request): JsonResponse
     {
-        $validator = \Illuminate\Support\Facades\Validator::make($request->all(), [
-            'equipment_id' => 'required|exists:equipment,id',
-            'equipment_item_id' => 'nullable|exists:equipment_items,id',
-            'condition' => 'required|in:baik,rusak_ringan,rusak_berat,hilang',
-            'check_date' => 'required|date',
-            'description' => 'nullable|string',
-            'action_taken' => 'nullable|string',
-            'photo' => 'nullable|image|max:2048',
-        ]);
+        $data = $request->validated();
 
-        if ($validator->fails()) {
-            return $this->sendError('Validation Error', $validator->errors()->toArray(), 422);
-        }
-
-        $equipment = \App\Models\Equipment::findOrFail($request->equipment_id);
-        
-        $previousCondition = $equipment->condition;
-        $equipmentItemId = $request->input('equipment_item_id');
-        if ($equipmentItemId) {
-            $item = \App\Models\EquipmentItem::where('id', $equipmentItemId)
-                ->where('equipment_id', $equipment->id)
-                ->first();
-            if ($item) {
-                $previousCondition = $item->condition;
-                $item->update(['condition' => $request->condition]);
-            }
-        }
-
-        $data = $request->only(['equipment_id', 'equipment_item_id', 'condition', 'check_date', 'description', 'action_taken']);
-        
         if ($request->hasFile('photo')) {
             $data['photo'] = $request->file('photo')->store('conditions', 'public');
         }
 
-        $condition = EquipmentCondition::create(array_merge($data, [
-            'checked_by' => $request->user()->id,
-            'previous_condition' => $previousCondition,
-        ]));
+        $condition = $this->recordCondition->handle($data, $request->user()->id);
 
-        if ($equipmentItemId) {
-            $equipment->syncConditionFromItems();
-        } else {
-            $equipment->items()->update(['condition' => $request->condition]);
-            $equipment->syncConditionFromItems();
-        }
-
-        return $this->sendSuccess($condition, 'Pemeriksaan kondisi berhasil dicatat', 201);
+        return $this->sendSuccess(
+            ConditionResource::make($condition),
+            'Pemeriksaan kondisi berhasil dicatat',
+            201,
+        );
     }
 
-    public function destroy($id)
+    public function destroy(EquipmentCondition $condition): JsonResponse
     {
-        $condition = EquipmentCondition::find($id);
-        if (!$condition) {
-            return $this->sendError('Catatan tidak ditemukan');
-        }
-
-        // Delete photo if exists
         if ($condition->photo) {
-            \Illuminate\Support\Facades\Storage::disk('public')->delete($condition->photo);
+            Storage::disk('public')->delete($condition->photo);
         }
 
         $condition->delete();

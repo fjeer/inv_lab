@@ -2,99 +2,83 @@
 
 namespace App\Http\Controllers\Api;
 
+use App\Http\Requests\Api\StoreCategoryRequest;
+use App\Http\Requests\Api\UpdateCategoryRequest;
+use App\Http\Resources\CategoryResource;
 use App\Models\EquipmentCategory;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Str;
 
 class CategoryApiController extends BaseApiController
 {
-    public function index(Request $request)
+    public function index(Request $request): JsonResponse
     {
         $query = EquipmentCategory::query();
         $this->applyTrashedFilter($query, $request);
 
-        // DataTables search
-        if ($request->filled('search.value')) {
-            $search = $request->input('search.value');
+        $search = $this->getSearch($request);
+
+        if ($search !== null) {
             $query->where(function ($q) use ($search) {
-                $q->where('name', 'like', '%' . $search . '%')
-                  ->orWhere('description', 'like', '%' . $search . '%');
+                $q->where('name', 'like', "%{$search}%")
+                  ->orWhere('description', 'like', "%{$search}%");
             });
         }
 
-        if ($request->has('length')) {
-            $limit = $request->input('length', 10);
-            $start = $request->input('start', 0);
-            $limit = max($limit, 1); $page = (int)($start / $limit) + 1;
-            $cats = $query->orderBy('name')->paginate($limit, ['*'], 'page', $page);
-            return $this->sendPaginated($cats, 'Data dikumpulkan');
-        }
+        $perPage = $this->getPerPage($request);
+        $page = $this->getPageFromRequest($request);
 
-        return $this->sendSuccess($query->orderBy('name')->get(), 'Data dikumpulkan');
+        $cats = $query->orderBy('name')->paginate($perPage, ['*'], 'page', $page);
+
+        return $this->sendPaginated($cats, 'Data kategori berhasil dimuat');
     }
 
-    public function show($id)
+    public function show(EquipmentCategory $category): JsonResponse
     {
-        $cat = EquipmentCategory::withTrashed()->find($id);
-        return $cat ? $this->sendSuccess($cat, 'Detail ditemukan') : $this->sendError('Not found');
+        return $this->sendSuccess(
+            CategoryResource::make($category),
+            'Detail ditemukan',
+        );
     }
 
-    public function store(Request $request)
+    public function store(StoreCategoryRequest $request): JsonResponse
     {
-        $validator = Validator::make($request->all(), [
-            'name' => 'required|string|max:255|unique:equipment_categories,name',
-            'description' => 'nullable|string',
-        ]);
-
-        if ($validator->fails()) {
-            return $this->sendError('Validation Error', $validator->errors()->toArray(), 422);
-        }
-
         $cat = EquipmentCategory::create([
             'name' => $request->name,
             'slug' => Str::slug($request->name),
-            'description' => $request->description
+            'description' => $request->description,
         ]);
-        return $this->sendSuccess($cat, 'Kategori dibuat', 201);
+
+        return $this->sendSuccess(
+            CategoryResource::make($cat),
+            'Kategori dibuat',
+            201,
+        );
     }
 
-    public function update(Request $request, $id)
+    public function update(UpdateCategoryRequest $request, EquipmentCategory $category): JsonResponse
     {
-        $cat = EquipmentCategory::find($id);
-        if (!$cat) {
-            return $this->sendError('Kategori tidak ditemukan');
-        }
-
-        $validator = Validator::make($request->all(), [
-            'name' => 'required|string|max:255|unique:equipment_categories,name,' . $id,
-            'description' => 'nullable|string',
-        ]);
-
-        if ($validator->fails()) {
-            return $this->sendError('Validation Error', $validator->errors()->toArray(), 422);
-        }
-
-        $cat->update([
+        $category->update([
             'name' => $request->name,
             'slug' => Str::slug($request->name),
-            'description' => $request->description
+            'description' => $request->description,
         ]);
-        return $this->sendSuccess($cat, 'Kategori diperbarui');
+
+        return $this->sendSuccess(
+            CategoryResource::make($category),
+            'Kategori diperbarui',
+        );
     }
 
-    public function destroy($id)
+    public function destroy(EquipmentCategory $category): JsonResponse
     {
-        $cat = EquipmentCategory::find($id);
-        if (!$cat) {
-            return $this->sendError('Kategori tidak ditemukan');
-        }
-
-        if ($cat->equipment()->exists()) {
+        if ($category->equipment()->exists()) {
             return $this->sendError('Kategori tidak dapat dihapus karena masih memiliki alat terdaftar');
         }
 
-        $cat->delete();
+        $category->delete();
+
         return $this->sendSuccess(null, 'Kategori dihapus');
     }
 }

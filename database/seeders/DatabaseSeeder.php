@@ -239,8 +239,8 @@ class DatabaseSeeder extends Seeder
         ];
 
         foreach ($equipments as $eqData) {
-            $eq = Equipment::create($eqData);
-            $eq->generateItems(); // Auto-generates individual items with QR codes
+            Equipment::create($eqData);
+            // Items auto-generated via Equipment::booted() created event
         }
 
         /* ---- Patrol Schedules ---- */

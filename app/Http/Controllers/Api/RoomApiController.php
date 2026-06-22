@@ -2,13 +2,16 @@
 
 namespace App\Http\Controllers\Api;
 
+use App\Http\Requests\Api\StoreRoomRequest;
+use App\Http\Requests\Api\UpdateRoomRequest;
+use App\Http\Resources\RoomResource;
 use App\Models\Room;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Validator;
 
 class RoomApiController extends BaseApiController
 {
-    public function index(Request $request)
+    public function index(Request $request): JsonResponse
     {
         $query = Room::with('building');
         $this->applyTrashedFilter($query, $request);
@@ -17,97 +20,56 @@ class RoomApiController extends BaseApiController
             $query->where('building_id', $request->building_id);
         }
 
-        // DataTables search
-        $search = null;
-        if ($request->filled('search.value')) {
-            $search = $request->input('search.value');
-        } elseif ($request->filled('search') && !is_array($request->input('search'))) {
-            $search = $request->input('search');
-        }
+        $search = $this->getSearch($request);
 
-        if ($search) {
+        if ($search !== null) {
             $query->where(function ($q) use ($search) {
-                $q->where('name', 'like', '%' . $search . '%')
-                  ->orWhere('code', 'like', '%' . $search . '%');
+                $q->where('name', 'like', "%{$search}%")
+                  ->orWhere('code', 'like', "%{$search}%");
             });
         }
 
-        if ($request->has('length')) {
-            $limit = $request->input('length', 10);
-            $start = $request->input('start', 0);
-            $limit = max($limit, 1); $page = (int)($start / $limit) + 1;
-            $rooms = $query->orderBy('name')->paginate($limit, ['*'], 'page', $page);
-            return $this->sendPaginated($rooms, 'Data ruangan berhasil dimuat');
-        }
+        $perPage = $this->getPerPage($request);
+        $page = $this->getPageFromRequest($request);
 
-        $rooms = $query->orderBy('name')->get();
+        $rooms = $query->orderBy('name')->paginate($perPage, ['*'], 'page', $page);
 
-        return $this->sendSuccess($rooms, 'Data ruangan berhasil dimuat');
+        return $this->sendPaginated($rooms, 'Data ruangan berhasil dimuat');
     }
 
-    public function show($id)
+    public function show(Room $room): JsonResponse
     {
-        $room = Room::withTrashed()->with(['building', 'laboratories'])->find($id);
+        $room->load(['building', 'laboratories']);
 
-        if (!$room) {
-            return $this->sendError('Ruangan tidak ditemukan');
-        }
-
-        return $this->sendSuccess($room, 'Detail ruangan berhasil dimuat');
+        return $this->sendSuccess(
+            RoomResource::make($room),
+            'Detail ruangan berhasil dimuat',
+        );
     }
 
-    public function store(Request $request)
+    public function store(StoreRoomRequest $request): JsonResponse
     {
-        $validator = Validator::make($request->all(), [
-            'building_id' => 'required|exists:buildings,id',
-            'name' => 'required|string|max:255',
-            'code' => 'required|string|max:50|unique:rooms,code',
-            'floor' => 'nullable|string|max:20',
-            'description' => 'nullable|string',
-        ]);
+        $room = Room::create($request->validated());
 
-        if ($validator->fails()) {
-            return $this->sendError('Validation Error', $validator->errors()->toArray(), 422);
-        }
-
-        $room = Room::create($request->all());
-
-        return $this->sendSuccess($room->load('building'), 'Ruangan berhasil dibuat', 201);
+        return $this->sendSuccess(
+            RoomResource::make($room->load('building')),
+            'Ruangan berhasil dibuat',
+            201,
+        );
     }
 
-    public function update(Request $request, $id)
+    public function update(UpdateRoomRequest $request, Room $room): JsonResponse
     {
-        $room = Room::find($id);
+        $room->update($request->validated());
 
-        if (!$room) {
-            return $this->sendError('Ruangan tidak ditemukan');
-        }
-
-        $validator = Validator::make($request->all(), [
-            'building_id' => 'required|exists:buildings,id',
-            'name' => 'required|string|max:255',
-            'code' => 'required|string|max:50|unique:rooms,code,' . $id,
-            'floor' => 'nullable|string|max:20',
-            'description' => 'nullable|string',
-        ]);
-
-        if ($validator->fails()) {
-            return $this->sendError('Validation Error', $validator->errors()->toArray(), 422);
-        }
-
-        $room->update($request->all());
-
-        return $this->sendSuccess($room->load('building'), 'Ruangan berhasil diperbarui');
+        return $this->sendSuccess(
+            RoomResource::make($room->load('building')),
+            'Ruangan berhasil diperbarui',
+        );
     }
 
-    public function destroy($id)
+    public function destroy(Room $room): JsonResponse
     {
-        $room = Room::find($id);
-
-        if (!$room) {
-            return $this->sendError('Ruangan tidak ditemukan');
-        }
-
         if ($room->laboratories()->count() > 0) {
             return $this->sendError('Ruangan tidak dapat dihapus karena masih memiliki laboratorium');
         }

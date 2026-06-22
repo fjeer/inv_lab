@@ -2,171 +2,111 @@
 
 namespace App\Http\Controllers\Api;
 
+use App\Actions\CreateEquipmentAction;
+use App\Actions\DeleteEquipmentAction;
+use App\Actions\UpdateEquipmentAction;
+use App\Http\Requests\Api\StoreEquipmentRequest;
+use App\Http\Requests\Api\UpdateEquipmentRequest;
+use App\Http\Resources\EquipmentResource;
 use App\Models\Equipment;
-use App\Models\ActivityLog;
+use App\Models\EquipmentItem;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Validator;
 
 class EquipmentApiController extends BaseApiController
 {
-    /**
-     * List all equipment with pagination and filters.
-     */
-    public function index(Request $request)
+    public function __construct(
+        private readonly CreateEquipmentAction $createEquipment,
+        private readonly UpdateEquipmentAction $updateEquipment,
+        private readonly DeleteEquipmentAction $deleteEquipment,
+    ) {}
+
+    public function index(Request $request): JsonResponse
     {
         $query = Equipment::with(['laboratory', 'category'])
             ->withCount([
                 'items',
                 'items as items_baik_count' => fn ($q) => $q->where('condition', 'baik'),
             ]);
+
         $this->applyTrashedFilter($query, $request);
 
-        // DataTables search
-        if ($request->filled('search.value')) {
-            $search = $request->input('search.value');
+        $search = $this->getSearch($request);
+
+        if ($search !== null) {
             $query->where(function ($q) use ($search) {
-                $q->where('name', 'like', '%' . $search . '%')
-                  ->orWhere('code', 'like', '%' . $search . '%');
+                $q->where('name', 'like', "%{$search}%")
+                  ->orWhere('code', 'like', "%{$search}%");
             });
         }
 
-        // Standard Filters
         if ($request->filled('laboratory_id')) {
             $query->where('laboratory_id', $request->laboratory_id);
         }
+
         if ($request->filled('condition')) {
             $query->where('condition', $request->condition);
         }
 
-        // DataTables pagination: start (offset) and length (limit)
-        $limit = $request->input('length', 10);
-        $start = $request->input('start', 0);
-        $limit = max($limit, 1); $page = (int)($start / $limit) + 1;
+        $perPage = $this->getPerPage($request);
+        $page = $this->getPageFromRequest($request);
 
-        $equipment = $query->orderBy('name')->paginate($limit, ['*'], 'page', $page);
+        $equipment = $query->orderBy('name')->paginate($perPage, ['*'], 'page', $page);
 
-        // Standard JSON for now, index.blade.php handler will map it
         return $this->sendPaginated($equipment, 'Data alat berhasil dimuat');
     }
 
-    /**
-     * Detail equipment.
-     */
-    public function show($id)
+    public function show(Equipment $equipment): JsonResponse
     {
-        $equipment = Equipment::withTrashed()->with(['laboratory', 'category', 'conditions.checker'])->find($id);
+        $equipment->load(['laboratory', 'category', 'conditions.checker']);
 
-        if (!$equipment) {
-            return $this->sendError('Alat tidak ditemukan');
-        }
-
-        return $this->sendSuccess($equipment, 'Detail alat berhasil dimuat');
+        return $this->sendSuccess(
+            EquipmentResource::make($equipment),
+            'Detail alat berhasil dimuat',
+        );
     }
 
-    /**
-     * Create new equipment.
-     */
-    public function store(Request $request)
+    public function store(StoreEquipmentRequest $request): JsonResponse
     {
-        $validator = Validator::make($request->all(), [
-            'laboratory_id' => 'required|exists:laboratories,id',
-            'category_id' => 'required|exists:equipment_categories,id',
-            'name' => 'required|string|max:255',
-            'code' => 'required|string|unique:equipment,code',
-            'quantity' => 'required|integer|min:0',
-            'condition' => 'required|in:baik,rusak_ringan,rusak_berat,hilang',
-            'status' => 'required|in:available,in_use,borrowed,maintenance,disposed',
-        ]);
+        $equipment = $this->createEquipment->handle($request->toDto());
 
-        if ($validator->fails()) {
-            return $this->sendError('Validation Error', $validator->errors()->toArray(), 422);
-        }
-
-        $equipment = Equipment::create($request->all());
-
-        ActivityLog::log(
-            'create_equipment',
-            "Menambahkan alat baru: {$equipment->name} ({$equipment->code})",
-            $equipment
+        return $this->sendSuccess(
+            EquipmentResource::make($equipment),
+            'Alat berhasil ditambahkan',
+            201,
         );
-
-        return $this->sendSuccess($equipment, 'Alat berhasil ditambahkan', 201);
     }
 
-    /**
-     * Update equipment.
-     */
-    public function update(Request $request, $id)
+    public function update(UpdateEquipmentRequest $request, Equipment $equipment): JsonResponse
     {
-        $equipment = Equipment::find($id);
+        $equipment = $this->updateEquipment->handle($equipment, $request->validated());
 
-        if (!$equipment) {
-            return $this->sendError('Alat tidak ditemukan');
-        }
-
-        $validator = Validator::make($request->all(), [
-            'laboratory_id' => 'sometimes|exists:laboratories,id',
-            'category_id' => 'sometimes|exists:equipment_categories,id',
-            'name' => 'sometimes|string|max:255',
-            'code' => 'sometimes|string|unique:equipment,code,' . $id,
-            'quantity' => 'sometimes|integer|min:0',
-            'condition' => 'sometimes|in:baik,rusak_ringan,rusak_berat,hilang',
-            'status' => 'sometimes|in:available,in_use,borrowed,maintenance,disposed',
-        ]);
-
-        if ($validator->fails()) {
-            return $this->sendError('Validation Error', $validator->errors()->toArray(), 422);
-        }
-
-        $equipment->update($request->all());
-
-        ActivityLog::log(
-            'update_equipment',
-            "Memperbarui data alat: {$equipment->name}",
-            $equipment
+        return $this->sendSuccess(
+            EquipmentResource::make($equipment),
+            'Data alat berhasil diperbarui',
         );
-
-        return $this->sendSuccess($equipment, 'Data alat berhasil diperbarui');
     }
 
-    /**
-     * Delete equipment.
-     */
-    public function destroy($id)
+    public function destroy(Equipment $equipment): JsonResponse
     {
-        $equipment = Equipment::find($id);
-
-        if (!$equipment) {
-            return $this->sendError('Alat tidak ditemukan');
-        }
-
-        $name = $equipment->name;
-        $equipment->delete();
-
-        ActivityLog::log(
-            'delete_equipment',
-            "Menghapus alat: {$name}"
-        );
+        $this->deleteEquipment->handle($equipment);
 
         return $this->sendSuccess(null, 'Alat berhasil dihapus');
     }
 
-    /**
-     * Scan QR code to get Equipment Item data.
-     */
-    public function scanQr(Request $request)
+    public function scanQr(Request $request): JsonResponse
     {
         $qrCode = $request->input('qr_code');
 
-        if (!$qrCode) {
+        if (! $qrCode) {
             return $this->sendError('QR Code tidak boleh kosong', [], 400);
         }
 
-        $item = \App\Models\EquipmentItem::where('qr_code', $qrCode)
+        $item = EquipmentItem::where('qr_code', $qrCode)
             ->with(['equipment.laboratory'])
             ->first();
 
-        if (!$item) {
+        if (! $item) {
             return $this->sendError('Alat tidak ditemukan dari QR Code ini', [], 404);
         }
 
