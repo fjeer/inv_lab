@@ -15,10 +15,14 @@ use App\Http\Controllers\UserController;
 use App\Http\Controllers\BuildingController;
 use App\Http\Controllers\RoomController;
 use App\Http\Controllers\PatrolScheduleController;
+use App\Http\Controllers\TelegramWebhookController;
 use App\Livewire\Admin\QrCodePrint;
 use App\Livewire\Admin\RoleManagement;
 use App\Livewire\Asisten\PatrolExecution;
 use Illuminate\Support\Facades\Route;
+
+// Telegram Webhook (public)
+Route::post('/api/telegram/webhook', [TelegramWebhookController::class, 'handle']);
 
 /*
 |--------------------------------------------------------------------------
