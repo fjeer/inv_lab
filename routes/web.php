@@ -55,6 +55,7 @@ Route::middleware('auth')->group(function () {
 
     // Telegram Linking
     Route::post('/profile/link-telegram', [ProfileController::class, 'linkTelegram'])->name('profile.link-telegram');
+    Route::post('/profile/check-telegram-link', [ProfileController::class, 'checkTelegramLink'])->name('profile.check-telegram-link');
     Route::post('/profile/unlink-telegram', [ProfileController::class, 'unlinkTelegram'])->name('profile.unlink-telegram');
     Route::post('/profile/test-telegram', [ProfileController::class, 'testTelegram'])->name('profile.test-telegram');
 

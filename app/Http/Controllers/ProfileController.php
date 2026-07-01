@@ -9,6 +9,8 @@ use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rules\Password;
 use App\Jobs\SendTestTelegram;
+use App\Models\User;
+use Illuminate\Support\Facades\Http;
 
 class ProfileController extends Controller
 {
@@ -63,8 +65,19 @@ class ProfileController extends Controller
     {
         $user = $request->user();
 
-        // Manual chat_id input (admin bypass for localhost)
+        // Manual chat_id input
         if ($manualChatId = $request->input('manual_chat_id')) {
+            $existing = User::where('telegram_chat_id', $manualChatId)
+                ->where('id', '!=', $user->id)
+                ->exists();
+
+            if ($existing) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Chat ID ini sudah terhubung ke akun lain. Setiap akun harus punya Chat ID unik.',
+                ], 422);
+            }
+
             $user->update([
                 'telegram_chat_id' => $manualChatId,
                 'telegram_verification_token' => null,
@@ -92,6 +105,99 @@ class ProfileController extends Controller
                 'url' => $url,
                 'token' => $token,
             ],
+        ]);
+    }
+
+    public function checkTelegramLink(Request $request)
+    {
+        $user = $request->user();
+        $token = $user->telegram_verification_token;
+
+        if (! $token || $user->telegram_chat_id) {
+            return response()->json([
+                'success' => true,
+                'linked' => (bool) $user->telegram_chat_id,
+            ]);
+        }
+
+        $botToken = config('services.telegram.bot_token');
+
+        if (! $botToken || $botToken === 'test-token') {
+            return response()->json([
+                'success' => false,
+                'linked' => false,
+                'message' => 'Bot token belum dikonfigurasi.',
+            ]);
+        }
+
+        $offset = cache('telegram_last_update_id');
+        $response = Http::post("https://api.telegram.org/bot{$botToken}/getUpdates", array_filter([
+            'offset' => $offset,
+            'timeout' => 5,
+        ]));
+
+        if (! $response->successful() || ! ($response['ok'] ?? false)) {
+            return response()->json([
+                'success' => false,
+                'linked' => false,
+                'message' => 'Gagal memeriksa Telegram.',
+            ]);
+        }
+
+        foreach ($response['result'] ?? [] as $update) {
+            $updateId = $update['update_id'];
+            $message = $update['message'] ?? [];
+            $chatId = $message['chat']['id'] ?? null;
+            $text = $message['text'] ?? '';
+
+            cache(['telegram_last_update_id' => $updateId + 1]);
+
+            if (! $chatId || ! str_starts_with($text, '/start ')) {
+                continue;
+            }
+
+            $msgToken = trim(substr($text, 7));
+
+            if ($msgToken === $token) {
+                $existing = User::where('telegram_chat_id', $chatId)
+                    ->where('id', '!=', $user->id)
+                    ->exists();
+
+                if ($existing) {
+                    Http::post("https://api.telegram.org/bot{$botToken}/sendMessage", [
+                        'chat_id' => $chatId,
+                        'text' => "❌ Chat ID ini sudah terhubung ke akun lain.",
+                    ]);
+
+                    return response()->json([
+                        'success' => false,
+                        'linked' => false,
+                        'message' => 'Chat ID sudah dipakai akun lain.',
+                    ]);
+                }
+
+                $user->update([
+                    'telegram_chat_id' => $chatId,
+                    'telegram_verification_token' => null,
+                ]);
+
+                Http::post("https://api.telegram.org/bot{$botToken}/sendMessage", [
+                    'chat_id' => $chatId,
+                    'text' => "✅ Akun Telegram berhasil dihubungkan ke {$user->name}!",
+                ]);
+
+                return response()->json([
+                    'success' => true,
+                    'linked' => true,
+                    'message' => 'Telegram berhasil dihubungkan!',
+                ]);
+            }
+        }
+
+        return response()->json([
+            'success' => true,
+            'linked' => false,
+            'message' => 'Menunggu konfirmasi dari Telegram...',
         ]);
     }
 

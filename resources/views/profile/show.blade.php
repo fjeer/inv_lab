@@ -60,7 +60,7 @@
         </div>
 
         {{-- Telegram Integration --}}
-        <div class="bg-white rounded-2xl border border-slate-100 shadow-sm p-6">
+        <div class="bg-white rounded-2xl border border-slate-100 shadow-sm p-6" id="telegram-section">
             <h2 class="font-semibold text-slate-700 mb-4">🔗 Telegram</h2>
 
             @if($user->hasTelegramLinked())
@@ -70,13 +70,11 @@
                         Terhubung ke Telegram
                     </span>
                 </div>
-
                 <div class="flex flex-wrap gap-3">
                     <button type="button" id="unlink-telegram"
                         class="px-4 py-2 text-sm font-medium text-red-600 bg-red-50 border border-red-100 rounded-xl hover:bg-red-100 transition-colors">
                         Putuskan
                     </button>
-
                     @if($user->isAdmin())
                         <button type="button" id="test-telegram"
                             class="px-4 py-2 text-sm font-medium text-blue-600 bg-blue-50 border border-blue-100 rounded-xl hover:bg-blue-100 transition-colors">
@@ -85,34 +83,27 @@
                     @endif
                 </div>
             @else
-                <p class="text-sm text-slate-500 mb-4">
-                    Hubungkan akun Telegram Anda untuk menerima notifikasi patrol secara otomatis.
-                </p>
-                <div class="flex flex-wrap gap-3 items-center">
+                <div id="telegram-not-linked">
+                    <p class="text-sm text-slate-500 mb-4">
+                        Hubungkan akun Telegram Anda untuk menerima notifikasi patrol secara otomatis.
+                    </p>
                     <button type="button" id="link-telegram"
                         class="px-5 py-2.5 text-sm font-semibold text-white bg-gradient-to-r from-blue-500 to-blue-600 rounded-xl shadow-lg shadow-blue-500/25 hover:shadow-blue-500/40 transition-all">
                         🔗 Hubungkan ke Telegram
                     </button>
-
-                    @if($user->isAdmin())
-                        <span class="text-xs text-slate-400">| atau</span>
-                        <div class="flex gap-2">
-                            <input type="text" id="manual-chat-id" placeholder="Chat ID Telegram"
-                                class="w-40 px-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/30">
-                            <button type="button" id="link-telegram-manual"
-                                class="px-3 py-2 text-xs font-medium text-slate-600 bg-slate-50 border border-slate-200 rounded-xl hover:bg-slate-100 transition-colors">
-                            Simpan
-                            </button>
-                        </div>
-                    @endif
                 </div>
-                @if($user->isAdmin())
+                <div id="telegram-polling" class="hidden">
+                    <div class="flex items-center gap-3 text-sm text-slate-600">
+                        <svg class="animate-spin h-5 w-5 text-blue-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
+                        </svg>
+                        <span id="polling-status">Menunggu konfirmasi dari Telegram...</span>
+                    </div>
                     <p class="text-xs text-slate-400 mt-2">
-                        💡 Kirim pesan ke bot di Telegram, lalu buka
-                        <code class="text-blue-600">api.telegram.org/bot{!! substr(config('services.telegram.bot_token'), 0, 10) !!}.../getUpdates</code>
-                        untuk lihat Chat ID Anda.
+                        💡 Kirim pesan <code class="text-xs bg-slate-100 px-1 rounded">/start</code> ke bot Telegram yang terbuka di tab baru.
                     </p>
-                @endif
+                </div>
             @endif
         </div>
     </div>
@@ -176,20 +167,61 @@ $(document).ready(function() {
         });
     });
 
-    // Telegram Link
+    // Telegram Link + Auto Polling
+    let telegramPollTimer = null;
+
     $('#link-telegram').on('click', function() {
         $.ajax({
             url: '/profile/link-telegram',
             type: 'POST',
             success: function(res) {
                 window.open(res.data.url, '_blank');
-                window.showAlert('Berhasil!', 'Token telah dibuat. Klik link di tab baru untuk menghubungkan Telegram.', 'success');
+                $('#telegram-not-linked').addClass('hidden');
+                $('#telegram-polling').removeClass('hidden');
+                $('#telegram-polling .animate-spin').removeClass('hidden');
+                startTelegramPoll();
             },
             error: function(err) {
                 Swal.fire('Error', err.responseJSON?.message || 'Gagal membuat token.', 'error');
             }
         });
     });
+
+    function startTelegramPoll() {
+        let attempts = 0;
+        const maxAttempts = 30;
+
+        telegramPollTimer = setInterval(function() {
+            attempts++;
+            $('#polling-status').text('Menunggu konfirmasi... (' + attempts + 's)');
+
+            $.ajax({
+                url: '/profile/check-telegram-link',
+                type: 'POST',
+                success: function(res) {
+                    if (res.linked) {
+                        clearInterval(telegramPollTimer);
+                        window.showAlert('Berhasil!', 'Telegram berhasil dihubungkan!', 'success');
+                        setTimeout(() => window.location.reload(), 1500);
+                    }
+                },
+                error: function(err) {
+                    $('#polling-status').text('Gagal memeriksa. Mencoba lagi...');
+                }
+            });
+
+            if (attempts >= maxAttempts) {
+                clearInterval(telegramPollTimer);
+                $('#telegram-polling .animate-spin').addClass('hidden');
+                $('#polling-status').html('⏱ Waktu habis. <a href="#" id="retry-link" class="text-blue-600 underline">Coba lagi</a>');
+                $('#retry-link').on('click', function(e) {
+                    e.preventDefault();
+                    $('#telegram-not-linked').removeClass('hidden');
+                    $('#telegram-polling').addClass('hidden');
+                });
+            }
+        }, 3000);
+    }
 
     // Telegram Unlink
     $('#unlink-telegram').on('click', function() {
@@ -213,27 +245,6 @@ $(document).ready(function() {
                         Swal.fire('Error', err.responseJSON?.message || 'Gagal memutuskan.', 'error');
                     }
                 });
-            }
-        });
-    });
-
-    // Link Telegram Manual (input chat_id)
-    $('#link-telegram-manual').on('click', function() {
-        const chatId = $('#manual-chat-id').val().trim();
-        if (!chatId) {
-            Swal.fire('Error', 'Masukkan Chat ID Telegram.', 'error');
-            return;
-        }
-        $.ajax({
-            url: '/profile/link-telegram',
-            type: 'POST',
-            data: { manual_chat_id: chatId },
-            success: function(res) {
-                window.showAlert('Berhasil!', 'Telegram berhasil dihubungkan.', 'success');
-                setTimeout(() => window.location.reload(), 1500);
-            },
-            error: function(err) {
-                Swal.fire('Error', err.responseJSON?.message || 'Gagal menghubungkan.', 'error');
             }
         });
     });
