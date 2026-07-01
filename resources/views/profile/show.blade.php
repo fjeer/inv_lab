@@ -58,6 +58,42 @@
                 <div class="flex justify-end"><button type="submit" class="px-5 py-2.5 text-sm font-semibold text-white bg-slate-800 rounded-xl hover:bg-slate-700 transition-colors">Ubah Password</button></div>
             </form>
         </div>
+
+        {{-- Telegram Integration --}}
+        <div class="bg-white rounded-2xl border border-slate-100 shadow-sm p-6">
+            <h2 class="font-semibold text-slate-700 mb-4">🔗 Telegram</h2>
+
+            @if($user->hasTelegramLinked())
+                <div class="flex items-center gap-3 mb-4">
+                    <span class="inline-flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-full font-semibold bg-green-50 text-green-700">
+                        <span class="w-2 h-2 rounded-full bg-green-500"></span>
+                        Terhubung ke Telegram
+                    </span>
+                </div>
+
+                <div class="flex flex-wrap gap-3">
+                    <button type="button" id="unlink-telegram"
+                        class="px-4 py-2 text-sm font-medium text-red-600 bg-red-50 border border-red-100 rounded-xl hover:bg-red-100 transition-colors">
+                        Putuskan
+                    </button>
+
+                    @if($user->isAdmin())
+                        <button type="button" id="test-telegram"
+                            class="px-4 py-2 text-sm font-medium text-blue-600 bg-blue-50 border border-blue-100 rounded-xl hover:bg-blue-100 transition-colors">
+                            📨 Kirim Pesan Uji Coba
+                        </button>
+                    @endif
+                </div>
+            @else
+                <p class="text-sm text-slate-500 mb-4">
+                    Hubungkan akun Telegram Anda untuk menerima notifikasi patrol secara otomatis.
+                </p>
+                <button type="button" id="link-telegram"
+                    class="px-5 py-2.5 text-sm font-semibold text-white bg-gradient-to-r from-blue-500 to-blue-600 rounded-xl shadow-lg shadow-blue-500/25 hover:shadow-blue-500/40 transition-all">
+                    🔗 Hubungkan ke Telegram
+                </button>
+            @endif
+        </div>
     </div>
 </div>
 
@@ -115,6 +151,61 @@ $(document).ready(function() {
                     msg = Object.values(errors).flat().join('<br>');
                 }
                 Swal.fire('Error', msg, 'error');
+            }
+        });
+    });
+
+    // Telegram Link
+    $('#link-telegram').on('click', function() {
+        $.ajax({
+            url: '/profile/link-telegram',
+            type: 'POST',
+            success: function(res) {
+                window.open(res.data.url, '_blank');
+                window.showAlert('Berhasil!', 'Token telah dibuat. Klik link di tab baru untuk menghubungkan Telegram.', 'success');
+            },
+            error: function(err) {
+                Swal.fire('Error', err.responseJSON?.message || 'Gagal membuat token.', 'error');
+            }
+        });
+    });
+
+    // Telegram Unlink
+    $('#unlink-telegram').on('click', function() {
+        Swal.fire({
+            title: 'Putuskan Telegram?',
+            text: 'Anda tidak akan menerima notifikasi lagi.',
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonText: 'Ya, putuskan',
+            cancelButtonText: 'Batal',
+        }).then((result) => {
+            if (result.isConfirmed) {
+                $.ajax({
+                    url: '/profile/unlink-telegram',
+                    type: 'POST',
+                    success: function(res) {
+                        window.showAlert('Berhasil!', res.message, 'success');
+                        setTimeout(() => window.location.reload(), 1500);
+                    },
+                    error: function(err) {
+                        Swal.fire('Error', err.responseJSON?.message || 'Gagal memutuskan.', 'error');
+                    }
+                });
+            }
+        });
+    });
+
+    // Test Telegram (Admin only)
+    $('#test-telegram').on('click', function() {
+        $.ajax({
+            url: '/profile/test-telegram',
+            type: 'POST',
+            success: function(res) {
+                window.showAlert('Berhasil!', res.message, 'success');
+            },
+            error: function(err) {
+                Swal.fire('Error', err.responseJSON?.message || 'Gagal mengirim pesan uji coba.', 'error');
             }
         });
     });
