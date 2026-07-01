@@ -13,7 +13,7 @@ use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
 
-#[Fillable(['name', 'email', 'password', 'role', 'role_id', 'nim_nip', 'phone', 'department', 'avatar', 'is_active'])]
+#[Fillable(['name', 'email', 'password', 'role', 'role_id', 'nim_nip', 'phone', 'department', 'avatar', 'is_active', 'telegram_chat_id', 'telegram_verification_token'])]
 #[Hidden(['password', 'remember_token'])]
 class User extends Authenticatable
 {
@@ -109,6 +109,11 @@ class User extends Authenticatable
             'pengguna' => 'Pengguna',
             default => $this->role,
         };
+    }
+
+    public function hasTelegramLinked(): bool
+    {
+        return ! is_null($this->telegram_chat_id);
     }
 
     /* ---- Relationships ---- */
