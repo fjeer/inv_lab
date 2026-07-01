@@ -19,7 +19,7 @@ class SendDailyPatrolReminders implements ShouldQueue
 
     public function handle(): void
     {
-        $today = strtolower(now()->format('l'));
+        $today = strtolower(now('Asia/Jakarta')->format('l'));
 
         $asistens = User::whereHas('patrolSchedules', function ($q) use ($today) {
             $q->where('status', 'active')

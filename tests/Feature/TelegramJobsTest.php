@@ -33,7 +33,7 @@ it('sends reminders to asisten with schedule today', function () {
     PatrolSchedule::factory()->create([
         'user_id' => $asisten->id,
         'laboratory_id' => $lab->id,
-        'day_of_week' => strtolower(now()->format('l')),
+        'day_of_week' => strtolower(now('Asia/Jakarta')->format('l')),
         'status' => 'active',
     ]);
 
@@ -54,7 +54,7 @@ it('does not send to asisten without telegram linked', function () {
     PatrolSchedule::factory()->create([
         'user_id' => $asisten->id,
         'laboratory_id' => $lab->id,
-        'day_of_week' => strtolower(now()->format('l')),
+        'day_of_week' => strtolower(now('Asia/Jakarta')->format('l')),
         'status' => 'active',
     ]);
 
@@ -76,7 +76,7 @@ it('sends summary to admin', function () {
     PatrolSchedule::factory()->create([
         'user_id' => $asisten->id,
         'laboratory_id' => $lab->id,
-        'day_of_week' => strtolower(now()->format('l')),
+        'day_of_week' => strtolower(now('Asia/Jakarta')->format('l')),
         'status' => 'active',
     ]);
 
