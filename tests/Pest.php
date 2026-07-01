@@ -18,6 +18,13 @@ pest()->extend(TestCase::class)
  // ->use(RefreshDatabase::class)
     ->in('Feature');
 
+pest()
+    ->beforeEach(function () {
+        config()->set('services.telegram.bot_token', 'test-token');
+        config()->set('services.telegram.bot_name', 'test_bot');
+    })
+    ->in('Feature');
+
 /*
 |--------------------------------------------------------------------------
 | Expectations
