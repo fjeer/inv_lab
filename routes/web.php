@@ -53,6 +53,11 @@ Route::middleware('auth')->group(function () {
     Route::put('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::put('/profile/password', [ProfileController::class, 'updatePassword'])->name('profile.password');
 
+    // Telegram Linking
+    Route::post('/profile/link-telegram', [ProfileController::class, 'linkTelegram'])->name('profile.link-telegram');
+    Route::post('/profile/unlink-telegram', [ProfileController::class, 'unlinkTelegram'])->name('profile.unlink-telegram');
+    Route::post('/profile/test-telegram', [ProfileController::class, 'testTelegram'])->name('profile.test-telegram');
+
     // Equipment (restricted to non-pengguna)
     Route::middleware('role:admin_lab,asisten_lab,admin,asisten')->group(function () {
         Route::get('/equipment', [EquipmentController::class, 'index'])->name('equipment.index');
