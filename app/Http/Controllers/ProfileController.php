@@ -63,6 +63,19 @@ class ProfileController extends Controller
     {
         $user = $request->user();
 
+        // Manual chat_id input (admin bypass for localhost)
+        if ($manualChatId = $request->input('manual_chat_id')) {
+            $user->update([
+                'telegram_chat_id' => $manualChatId,
+                'telegram_verification_token' => null,
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Telegram berhasil dihubungkan secara manual.',
+            ]);
+        }
+
         if ($user->telegram_verification_token) {
             $token = $user->telegram_verification_token;
         } else {

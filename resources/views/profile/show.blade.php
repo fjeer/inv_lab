@@ -88,10 +88,31 @@
                 <p class="text-sm text-slate-500 mb-4">
                     Hubungkan akun Telegram Anda untuk menerima notifikasi patrol secara otomatis.
                 </p>
-                <button type="button" id="link-telegram"
-                    class="px-5 py-2.5 text-sm font-semibold text-white bg-gradient-to-r from-blue-500 to-blue-600 rounded-xl shadow-lg shadow-blue-500/25 hover:shadow-blue-500/40 transition-all">
-                    🔗 Hubungkan ke Telegram
-                </button>
+                <div class="flex flex-wrap gap-3 items-center">
+                    <button type="button" id="link-telegram"
+                        class="px-5 py-2.5 text-sm font-semibold text-white bg-gradient-to-r from-blue-500 to-blue-600 rounded-xl shadow-lg shadow-blue-500/25 hover:shadow-blue-500/40 transition-all">
+                        🔗 Hubungkan ke Telegram
+                    </button>
+
+                    @if($user->isAdmin())
+                        <span class="text-xs text-slate-400">| atau</span>
+                        <div class="flex gap-2">
+                            <input type="text" id="manual-chat-id" placeholder="Chat ID Telegram"
+                                class="w-40 px-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/30">
+                            <button type="button" id="link-telegram-manual"
+                                class="px-3 py-2 text-xs font-medium text-slate-600 bg-slate-50 border border-slate-200 rounded-xl hover:bg-slate-100 transition-colors">
+                            Simpan
+                            </button>
+                        </div>
+                    @endif
+                </div>
+                @if($user->isAdmin())
+                    <p class="text-xs text-slate-400 mt-2">
+                        💡 Kirim pesan ke bot di Telegram, lalu buka
+                        <code class="text-blue-600">api.telegram.org/bot{!! substr(config('services.telegram.bot_token'), 0, 10) !!}.../getUpdates</code>
+                        untuk lihat Chat ID Anda.
+                    </p>
+                @endif
             @endif
         </div>
     </div>
@@ -192,6 +213,27 @@ $(document).ready(function() {
                         Swal.fire('Error', err.responseJSON?.message || 'Gagal memutuskan.', 'error');
                     }
                 });
+            }
+        });
+    });
+
+    // Link Telegram Manual (input chat_id)
+    $('#link-telegram-manual').on('click', function() {
+        const chatId = $('#manual-chat-id').val().trim();
+        if (!chatId) {
+            Swal.fire('Error', 'Masukkan Chat ID Telegram.', 'error');
+            return;
+        }
+        $.ajax({
+            url: '/profile/link-telegram',
+            type: 'POST',
+            data: { manual_chat_id: chatId },
+            success: function(res) {
+                window.showAlert('Berhasil!', 'Telegram berhasil dihubungkan.', 'success');
+                setTimeout(() => window.location.reload(), 1500);
+            },
+            error: function(err) {
+                Swal.fire('Error', err.responseJSON?.message || 'Gagal menghubungkan.', 'error');
             }
         });
     });
