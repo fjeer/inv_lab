@@ -83,6 +83,8 @@ class ProfileController extends Controller
                 'telegram_verification_token' => null,
             ]);
 
+            $user->sendTodayReminder();
+
             return response()->json([
                 'success' => true,
                 'message' => 'Telegram berhasil dihubungkan secara manual.',
@@ -180,6 +182,8 @@ class ProfileController extends Controller
                     'telegram_chat_id' => $chatId,
                     'telegram_verification_token' => null,
                 ]);
+
+                $user->sendTodayReminder();
 
                 Http::post("https://api.telegram.org/bot{$botToken}/sendMessage", [
                     'chat_id' => $chatId,

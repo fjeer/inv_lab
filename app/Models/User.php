@@ -2,6 +2,8 @@
 
 namespace App\Models;
 
+use App\Models\PatrolSchedule;
+use App\Notifications\PatrolReminderNotification;
 use Database\Factories\UserFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Hidden;
@@ -114,6 +116,38 @@ class User extends Authenticatable
     public function hasTelegramLinked(): bool
     {
         return ! is_null($this->telegram_chat_id);
+    }
+
+    public function sendTodayReminder(): void
+    {
+        $today = strtolower(now('Asia/Jakarta')->format('l'));
+
+        $schedules = $this->patrolSchedules()
+            ->where('status', 'active')
+            ->where('day_of_week', $today)
+            ->with('laboratory')
+            ->get();
+
+        if ($schedules->isNotEmpty()) {
+            $this->notify(new PatrolReminderNotification(
+                schedules: $schedules,
+                type: 'asisten'
+            ));
+        }
+
+        if ($this->isAdmin()) {
+            $allTodaySchedules = PatrolSchedule::with(['user', 'laboratory'])
+                ->where('status', 'active')
+                ->where('day_of_week', $today)
+                ->get();
+
+            if ($allTodaySchedules->isNotEmpty()) {
+                $this->notify(new PatrolReminderNotification(
+                    schedules: $allTodaySchedules,
+                    type: 'admin'
+                ));
+            }
+        }
     }
 
     /* ---- Relationships ---- */

@@ -39,6 +39,8 @@ class TelegramWebhookController extends Controller
             'telegram_verification_token' => null,
         ]);
 
+        $user->sendTodayReminder();
+
         Http::post("https://api.telegram.org/bot{$botToken}/sendMessage", [
             'chat_id' => $chatId,
             'text' => "✅ Akun Telegram berhasil dihubungkan ke {$user->name}!\n\nSekarang Anda akan menerima notifikasi patrol dari Sistem Patrol Inventaris Lab.",
