@@ -8,25 +8,25 @@
 </div>
 
 <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
-    <div class="bg-white rounded-2xl p-5 border border-slate-100 shadow-sm hover:shadow-md transition-shadow">
-        <div class="w-11 h-11 bg-blue-50 rounded-xl flex items-center justify-center mb-3">
-            <svg class="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"/></svg>
+    <div class="bg-white rounded-2xl p-5 border border-slate-100 shadow-sm hover:shadow-lg transition-all duration-300 group">
+        <div class="w-11 h-11 bg-gradient-to-br from-blue-400 to-blue-600 text-white rounded-xl flex items-center justify-center mb-3 shadow-lg shadow-blue-200 group-hover:shadow-blue-300 group-hover:scale-110 transition-all duration-300 icon-shine">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"/></svg>
         </div>
         <p class="text-2xl font-bold text-slate-800">{{ $stats['my_borrowings'] }}</p>
         <p class="text-xs text-slate-400 font-medium mt-0.5">Total Peminjaman</p>
     </div>
 
-    <div class="bg-white rounded-2xl p-5 border border-slate-100 shadow-sm hover:shadow-md transition-shadow">
-        <div class="w-11 h-11 bg-yellow-50 rounded-xl flex items-center justify-center mb-3">
-            <svg class="w-6 h-6 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+    <div class="bg-white rounded-2xl p-5 border border-slate-100 shadow-sm hover:shadow-lg transition-all duration-300 group">
+        <div class="w-11 h-11 bg-gradient-to-br from-amber-400 to-amber-600 text-white rounded-xl flex items-center justify-center mb-3 shadow-lg shadow-amber-200 group-hover:shadow-amber-300 group-hover:scale-110 transition-all duration-300 icon-shine">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
         </div>
         <p class="text-2xl font-bold text-slate-800">{{ $stats['pending_borrowings'] }}</p>
         <p class="text-xs text-slate-400 font-medium mt-0.5">Menunggu Persetujuan</p>
     </div>
 
-    <div class="bg-white rounded-2xl p-5 border border-slate-100 shadow-sm hover:shadow-md transition-shadow">
-        <div class="w-11 h-11 bg-red-50 rounded-xl flex items-center justify-center mb-3">
-            <svg class="w-6 h-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
+    <div class="bg-white rounded-2xl p-5 border border-slate-100 shadow-sm hover:shadow-lg transition-all duration-300 group">
+        <div class="w-11 h-11 bg-gradient-to-br from-red-400 to-red-600 text-white rounded-xl flex items-center justify-center mb-3 shadow-lg shadow-red-200 group-hover:shadow-red-300 group-hover:scale-110 transition-all duration-300 icon-shine">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
         </div>
         <p class="text-2xl font-bold text-slate-800">{{ $stats['my_damage_reports'] }}</p>
         <p class="text-xs text-slate-400 font-medium mt-0.5">Laporan Kerusakan Saya</p>
@@ -35,26 +35,26 @@
 
 {{-- Quick Actions --}}
 <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-8">
-    <a href="{{ route('borrowings.create') }}" class="group bg-gradient-to-br from-blue-500 to-indigo-600 rounded-2xl p-5 text-white shadow-lg shadow-blue-500/20 hover:shadow-blue-500/30 transition-all duration-300 hover:-translate-y-0.5">
-        <div class="w-11 h-11 bg-white/20 rounded-xl flex items-center justify-center mb-3 group-hover:bg-white/30 transition-colors">
-            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"/></svg>
+    <a href="{{ route('borrowings.create') }}" class="group bg-gradient-to-br from-blue-500 to-indigo-600 rounded-2xl p-5 text-white shadow-lg shadow-blue-500/20 hover:shadow-blue-500/30 hover:-translate-y-1 transition-all duration-300">
+        <div class="w-11 h-11 bg-white/20 rounded-xl flex items-center justify-center mb-3 group-hover:bg-white/30 group-hover:scale-110 transition-all duration-300 icon-shine">
+            <svg class="w-6 h-6 icon-float" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"/></svg>
         </div>
         <h3 class="font-semibold text-lg">Pinjam Lab</h3>
         <p class="text-blue-100 text-sm mt-1">Ajukan peminjaman laboratorium</p>
     </a>
 
-    <a href="{{ route('damage-reports.create') }}" class="group bg-gradient-to-br from-amber-500 to-orange-600 rounded-2xl p-5 text-white shadow-lg shadow-amber-500/20 hover:shadow-amber-500/30 transition-all duration-300 hover:-translate-y-0.5">
-        <div class="w-11 h-11 bg-white/20 rounded-xl flex items-center justify-center mb-3 group-hover:bg-white/30 transition-colors">
-            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
+    <a href="{{ route('damage-reports.create') }}" class="group bg-gradient-to-br from-amber-500 to-orange-600 rounded-2xl p-5 text-white shadow-lg shadow-amber-500/20 hover:shadow-amber-500/30 hover:-translate-y-1 transition-all duration-300">
+        <div class="w-11 h-11 bg-white/20 rounded-xl flex items-center justify-center mb-3 group-hover:bg-white/30 group-hover:scale-110 transition-all duration-300 icon-shine">
+            <svg class="w-6 h-6 icon-float" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="animation-delay: 0.5s"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
         </div>
         <h3 class="font-semibold text-lg">Lapor Kerusakan</h3>
         <p class="text-amber-100 text-sm mt-1">Laporkan alat yang rusak</p>
     </a>
 
 
-    <a href="{{ route('laboratories.index') }}" class="group bg-gradient-to-br from-indigo-500 to-purple-600 rounded-2xl p-5 text-white shadow-lg shadow-indigo-500/20 hover:shadow-indigo-500/30 transition-all duration-300 hover:-translate-y-0.5">
-        <div class="w-11 h-11 bg-white/20 rounded-xl flex items-center justify-center mb-3 group-hover:bg-white/30 transition-colors">
-            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/></svg>
+    <a href="{{ route('laboratories.index') }}" class="group bg-gradient-to-br from-indigo-500 to-purple-600 rounded-2xl p-5 text-white shadow-lg shadow-indigo-500/20 hover:shadow-indigo-500/30 hover:-translate-y-1 transition-all duration-300">
+        <div class="w-11 h-11 bg-white/20 rounded-xl flex items-center justify-center mb-3 group-hover:bg-white/30 group-hover:scale-110 transition-all duration-300 icon-shine">
+            <svg class="w-6 h-6 icon-float" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="animation-delay: 1s"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/></svg>
         </div>
         <h3 class="font-semibold text-lg">Daftar Lab</h3>
         <p class="text-indigo-100 text-sm mt-1">Lihat daftar & fasilitas lab</p>

@@ -2,12 +2,14 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\HasConditionLabel;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 class EquipmentCondition extends Model
 {
+    use HasConditionLabel;
     use SoftDeletes;
     protected $fillable = [
         'equipment_id',
@@ -47,14 +49,4 @@ class EquipmentCondition extends Model
 
     /* ---- Accessors ---- */
 
-    public function getConditionLabelAttribute(): string
-    {
-        return match ($this->condition) {
-            'baik' => 'Baik',
-            'rusak_ringan' => 'Rusak Ringan',
-            'rusak_berat' => 'Rusak Berat',
-            'hilang' => 'Hilang',
-            default => $this->condition,
-        };
-    }
 }

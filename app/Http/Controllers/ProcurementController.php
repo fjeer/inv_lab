@@ -13,8 +13,7 @@ class ProcurementController extends Controller
         $user = $request->user();
         $query = Procurement::with(['requester', 'approver'])->withCount('items');
 
-        // Non-admin/asisten can only see their own requests
-        if ($user->role === 'pengguna' || $user->role === 'asisten_lab') {
+        if (! $user->isAdmin()) {
             $query->where('requested_by', $user->id);
         }
 

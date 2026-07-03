@@ -2,6 +2,7 @@
 
 namespace App\Actions;
 
+use App\Models\ActivityLog;
 use App\Models\Equipment;
 use App\Models\EquipmentItem;
 use App\Models\Procurement;
@@ -75,6 +76,14 @@ final class ApproveProcurementAction
                 }
             }
         });
+
+        $procurement->load(['requester']);
+
+        ActivityLog::log(
+            'approve_procurement',
+            "Menyetujui pengadaan: {$procurement->procurement_number} ({$procurement->title}) oleh {$procurement->requester?->name}",
+            $procurement,
+        );
 
         return $procurement->fresh();
     }

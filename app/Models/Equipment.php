@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\HasConditionLabel;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -10,6 +11,7 @@ use Illuminate\Support\Facades\DB;
 
 class Equipment extends Model
 {
+    use HasConditionLabel;
     use SoftDeletes;
     protected static function booted()
     {
@@ -80,17 +82,6 @@ class Equipment extends Model
     }
 
     /* ---- Accessors ---- */
-
-    public function getConditionLabelAttribute(): string
-    {
-        return match ($this->condition) {
-            'baik' => 'Baik',
-            'rusak_ringan' => 'Rusak Ringan',
-            'rusak_berat' => 'Rusak Berat',
-            'hilang' => 'Hilang',
-            default => $this->condition,
-        };
-    }
 
     public function getStatusLabelAttribute(): string
     {
